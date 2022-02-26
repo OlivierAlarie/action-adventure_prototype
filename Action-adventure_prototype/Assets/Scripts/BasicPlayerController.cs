@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class BasicPlayerController : MonoBehaviour
 {
@@ -36,6 +37,12 @@ public class BasicPlayerController : MonoBehaviour
     [Header("Model")]
     public Transform RootGeometry;
 
+    //Inputs
+    private Vector2 _inputMove;
+    private Vector2 _inputLook;
+    private bool _inputJump;
+    private bool _inputDash;
+
     private Vector3 _targetDirection = Vector3.zero;
     private float _targetVelocityXZ = 0f;
     private float _targetVelocityChangeRate = 0f;
@@ -50,8 +57,58 @@ public class BasicPlayerController : MonoBehaviour
 
     private float _knockBackCounter = 0f;
 
+    private PlayerInput _playerInputs;
 
-    // Start is called before the first frame update
+    private void Awake()
+    {
+        _playerInputs = new PlayerInput();
+
+        _playerInputs.CharacterControls.Move.started += OnMoveInput;
+        _playerInputs.CharacterControls.Move.performed += OnMoveInput;
+        _playerInputs.CharacterControls.Move.canceled += OnMoveInput;
+
+        _playerInputs.CharacterControls.Jump.started += OnJumpInput;
+        _playerInputs.CharacterControls.Jump.performed += OnJumpInput;
+        _playerInputs.CharacterControls.Jump.canceled += OnJumpInput;
+
+        _playerInputs.CharacterControls.Look.started += OnLookInput;
+        _playerInputs.CharacterControls.Look.performed += OnLookInput;
+        _playerInputs.CharacterControls.Look.canceled += OnLookInput;
+    }
+
+    private void OnEnable()
+    {
+        _playerInputs.Enable();
+    }
+
+    private void OnDisable()
+    {
+        _playerInputs.Disable();
+    }
+
+    private void OnMoveInput(InputAction.CallbackContext context)
+    {
+        _inputMove = context.ReadValue<Vector2>();
+        Debug.Log(_inputMove);
+    }
+
+    private void OnLookInput(InputAction.CallbackContext context)
+    {
+        _inputLook = context.ReadValue<Vector2>();
+        Debug.Log(_inputLook);
+
+    }
+
+    private void OnJumpInput(InputAction.CallbackContext context)
+    {
+        _inputJump = context.ReadValueAsButton();
+    }
+
+    private void OnDashInput(InputAction.CallbackContext context)
+    {
+        _inputDash = false;
+    }
+
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -65,20 +122,20 @@ public class BasicPlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Time.timeScale != 0)
+        if (!PauseMenu.GameIsPaused)
         {
             CameraCheck();
             JumpAndGravityCheck();
             MovePlayer();
-            AnimatePlayer();
+            if(_characterAnimator != null) AnimatePlayer();
         }
     }
 
     void CameraCheck()
     {
         //Calculate Camera Rotation based of mouse movement
-        _targetRotationH += Input.GetAxis("Camera X") * CameraSensitivityX * Time.deltaTime;
-        _targetRotationV += Input.GetAxis("Camera Y") * CameraSensitivityY * Time.deltaTime;
+        _targetRotationH += _inputLook.x * CameraSensitivityX * Time.deltaTime;
+        _targetRotationV += _inputLook.y * CameraSensitivityY * Time.deltaTime;
 
         //Clamp Vertical Rotation
         _targetRotationV = Mathf.Clamp(_targetRotationV, MaxUpwardAngle, MaxDownwardAngle);
@@ -111,7 +168,7 @@ public class BasicPlayerController : MonoBehaviour
                 _landingSound.Play();
                 _playerFalling = false;
             }
-            if (Input.GetButtonDown("Jump") || _playerJumpTimer > 0)
+            if (_inputJump || _playerJumpTimer > 0)
             {
                 _jumpSound.Play();
                 _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
@@ -125,13 +182,13 @@ public class BasicPlayerController : MonoBehaviour
         {
             //Coyote Time
             //Early jump stop
-            if (Input.GetButtonUp("Jump") && _playerJumping && _targetVelocityY > 0)
+            if (!_inputJump && _playerJumping && _targetVelocityY > 0)
             {
                 _targetVelocityY *= 0.5f;
             }
 
             //Jump Leniency
-            if (Input.GetButtonDown("Jump"))
+            if (_inputJump)
             {
                 if (_playerCoyoteTimer > 0)
                 {
@@ -152,10 +209,6 @@ public class BasicPlayerController : MonoBehaviour
             {
                 _targetVelocityY = _terminalVelocityY;
             }
-            if(_lastHeight - transform.position.y > MaxFallHeight)
-            {
-                Debug.Log("Dead");
-            }
         }
     }
 
@@ -166,11 +219,11 @@ public class BasicPlayerController : MonoBehaviour
         //Check if being knockbacked
         if (_knockBackCounter <= 0)
         {
-            newDirection = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
+            newDirection = new Vector3(_inputMove.x, 0f, _inputMove.y);
 
             if (_characterController.isGrounded)
             {
-                _targetSpeed = Input.GetButton("Dash") ? MaxDashSpeed : MaxSpeed;
+                _targetSpeed = _inputDash ? MaxDashSpeed : MaxSpeed;
             }
         }
         else
@@ -178,8 +231,6 @@ public class BasicPlayerController : MonoBehaviour
             _knockBackCounter -= Time.deltaTime;
         }
        
-
-
         if (newDirection == Vector3.zero)
         {
             _targetVelocityXZ -= _targetSpeed * _targetVelocityChangeRate * Time.deltaTime; //10 * 1 * 0.5
@@ -213,6 +264,7 @@ public class BasicPlayerController : MonoBehaviour
 
     private void AnimatePlayer()
     {
+
         if (_characterController.isGrounded)
         {
             _targetVelocityY = 0;
@@ -247,11 +299,7 @@ public class BasicPlayerController : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        GameObject gameO = hit.collider.gameObject;
-        if (gameO.tag == "Wraith")
-        {
-            KnockBack(hit.normal, gameO.GetComponent<Wraith>().knockBackDuration, gameO.GetComponent<Wraith>().knockBackForce);
-        }
+
     }
 
     public void KnockBack(Vector3 knockBackDirection, float knockBackDuration = 0.5f, float knockBackForce = 10f)
