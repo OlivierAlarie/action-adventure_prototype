@@ -62,7 +62,7 @@ public class Wraith : MonoBehaviour
 
         if (collision.gameObject.name == "PlayerCharacter")
         {
-            player.KnockBack(-1 * collision.GetContact(0).normal, knockBackDuration, knockBackForce);
+            //player.KnockBack(-1 * collision.GetContact(0).normal, knockBackDuration, knockBackForce);
         }
     }
 

@@ -24,7 +24,7 @@ public class MovingCube : MonoBehaviour
         if (collision.gameObject.name == "PlayerCharacter")
         {
             Debug.Log("Collided");
-            bpc.KnockBack(-1*collision.GetContact(0).normal);
+            //bpc.KnockBack(-1*collision.GetContact(0).normal);
         }
     }
 }

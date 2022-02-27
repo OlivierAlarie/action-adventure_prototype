@@ -22,42 +22,40 @@ public class BasicPlayerController : MonoBehaviour
     [Header("Character")]
     public Animator _characterAnimator;
     public CharacterController _characterController;
-    public float MaxDashSpeed = 10f;
     public float MaxSpeed = 5f; //Target speed for the character
     public float TimeToMaxSpeed = 1f;//Time to reach max speed (in Seconds)
+    public float RollLength = 10f;
     public float JumpHeight = 1f; //Target height for the character
     public float JumpLeniency = 0.15f; // Seconds of leniency where a jump attempt is registered before reaching the ground / after leaving the ground without jumping
     public float Gravity = -9.81f;
-    public float MaxFallHeight = 25; //If the character falls MaxFallHeight units on the y axis between 2 grounded checks, he dies
     public Transform LastCheckpoint;
-
-    public AudioSource _jumpSound;
-    public AudioSource _landingSound;
 
     [Header("Model")]
     public Transform RootGeometry;
 
     //Inputs
+    private PlayerInput _playerInputs;
     private Vector2 _inputMove;
     private Vector2 _inputLook;
-    private bool _inputJump;
-    private bool _inputDash;
+    private bool _inputJump = false;
 
     private Vector3 _targetDirection = Vector3.zero;
+    private Vector3 _targetMotion = Vector3.zero;
     private float _targetVelocityXZ = 0f;
     private float _targetVelocityChangeRate = 0f;
     private float _targetVelocityY = 0f;
-    private float _targetSpeed = 0f;
     private float _terminalVelocityY = -53f;
-    private bool _playerJumping = false;
-    private bool _playerFalling = false;
-    private float _playerJumpTimer = 0f;
-    private float _playerCoyoteTimer = 0f;
-    private float _lastHeight = 0f;
 
-    private float _knockBackCounter = 0f;
+    private PlayerStates _currentState;
 
-    private PlayerInput _playerInputs;
+    private enum PlayerStates
+    {
+        Idle,
+        Jump,
+        Run,
+        Roll,
+        Fall
+    }
 
     private void Awake()
     {
@@ -68,7 +66,6 @@ public class BasicPlayerController : MonoBehaviour
         _playerInputs.CharacterControls.Move.canceled += OnMoveInput;
 
         _playerInputs.CharacterControls.Jump.started += OnJumpInput;
-        _playerInputs.CharacterControls.Jump.performed += OnJumpInput;
         _playerInputs.CharacterControls.Jump.canceled += OnJumpInput;
 
         _playerInputs.CharacterControls.Look.started += OnLookInput;
@@ -89,24 +86,21 @@ public class BasicPlayerController : MonoBehaviour
     private void OnMoveInput(InputAction.CallbackContext context)
     {
         _inputMove = context.ReadValue<Vector2>();
-        Debug.Log(_inputMove);
     }
 
     private void OnLookInput(InputAction.CallbackContext context)
     {
         _inputLook = context.ReadValue<Vector2>();
-        Debug.Log(_inputLook);
-
     }
 
     private void OnJumpInput(InputAction.CallbackContext context)
     {
-        _inputJump = context.ReadValueAsButton();
-    }
-
-    private void OnDashInput(InputAction.CallbackContext context)
-    {
-        _inputDash = false;
+        _inputJump = false;
+        if (context.action.WasPressedThisFrame())
+        {
+            Debug.Log("Jump Pressed");
+            _inputJump = true;
+        }
     }
 
     void Start()
@@ -117,21 +111,19 @@ public class BasicPlayerController : MonoBehaviour
         _maxCameraDistance = Vector3.Distance(CameraRoot.transform.position, MainCamera.transform.position);
 
         _targetVelocityChangeRate = 1 / TimeToMaxSpeed;
+        StartIdle();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (!PauseMenu.GameIsPaused)
-        {
-            CameraCheck();
-            JumpAndGravityCheck();
-            MovePlayer();
-            if(_characterAnimator != null) AnimatePlayer();
-        }
+        if (PauseMenu.GameIsPaused) { return; }
+        RunCamera();
+        RunGravity();
+        RunStates();
+        Move();
     }
-
-    void CameraCheck()
+    void RunCamera()
     {
         //Calculate Camera Rotation based of mouse movement
         _targetRotationH += _inputLook.x * CameraSensitivityX * Time.deltaTime;
@@ -157,158 +149,176 @@ public class BasicPlayerController : MonoBehaviour
         }
     }
 
-    void JumpAndGravityCheck()
+    void RunGravity()
     {
-        if (_characterController.isGrounded)
+        if (!_characterController.isGrounded)
         {
-            _targetVelocityY = 0;
-            _playerJumping = false;
-            if (_playerFalling)
-            {
-                _landingSound.Play();
-                _playerFalling = false;
-            }
-            if (_inputJump || _playerJumpTimer > 0)
-            {
-                _jumpSound.Play();
-                _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
-                _playerJumping = true;
-            }
-            _lastHeight = transform.position.y;
-            _playerJumpTimer = 0;
-            _playerCoyoteTimer = JumpLeniency;
-        }
-        else
-        {
-            //Coyote Time
-            //Early jump stop
-            if (!_inputJump && _playerJumping && _targetVelocityY > 0)
-            {
-                _targetVelocityY *= 0.5f;
-            }
-
-            //Jump Leniency
-            if (_inputJump)
-            {
-                if (_playerCoyoteTimer > 0)
-                {
-                    _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
-                    _jumpSound.Play();
-                    _playerJumping = true;
-                }
-                else
-                {
-                    _playerJumpTimer = JumpLeniency;
-                }
-            }
-            _playerCoyoteTimer -= Time.deltaTime;
-            _playerJumpTimer -= Time.deltaTime;
-
             _targetVelocityY += Gravity * Time.deltaTime;
             if (_targetVelocityY < _terminalVelocityY)
             {
                 _targetVelocityY = _terminalVelocityY;
             }
         }
-    }
-
-    void MovePlayer()
-    {
-        Vector3 newDirection = Vector3.zero;
-
-        //Check if being knockbacked
-        if (_knockBackCounter <= 0)
-        {
-            newDirection = new Vector3(_inputMove.x, 0f, _inputMove.y);
-
-            if (_characterController.isGrounded)
-            {
-                _targetSpeed = _inputDash ? MaxDashSpeed : MaxSpeed;
-            }
-        }
         else
         {
-            _knockBackCounter -= Time.deltaTime;
+            _targetVelocityY = -1f;
         }
-       
+    }
+
+    void RunStates()
+    {
+        switch (_currentState)
+        {
+            case PlayerStates.Idle:
+                Idle();
+                break;
+            case PlayerStates.Jump:
+                Jump();
+                break;
+            case PlayerStates.Run:
+                Run();
+                break;
+            case PlayerStates.Roll:
+                Roll();
+                break;
+            case PlayerStates.Fall:
+                Fall();
+                break;
+        }
+        //Debug.Log(_currentState);
+    }
+
+    private void StartIdle() 
+    {
+        _currentState = PlayerStates.Idle;
+        _characterAnimator.Play("Idle");
+        _targetMotion.x = 0;
+        _targetMotion.z = 0;
+    }
+    private void Idle() 
+    {
+        StopIdle();
+    }
+    private void StopIdle()
+    {
+        if (!_characterController.isGrounded) { StartFall(); }
+        else if (_inputMove.x != 0 || _inputMove.y != 0) { StartRun(); }
+        else if (_inputJump) { StartJump(); }
+    }
+
+    private void StartJump() 
+    {
+        _currentState = PlayerStates.Jump;
+        _characterAnimator.Play("Jump");
+        _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
+
+    }
+    private void Jump()
+    {
+        StopJump();
+    }
+    private void StopJump() 
+    {
+        if(_targetVelocityY <= 0)
+        {
+            if (!_characterController.isGrounded)
+            {
+                StartFall();
+            }
+            else
+            {
+                StartIdle();
+            }
+        }
+    }
+
+    private void StartRun()
+    {
+        _currentState = PlayerStates.Run;
+        _characterAnimator.Play("Run");
+    }
+    private void Run()
+    {
+        StopRun();
+
+        Vector3 newDirection = new Vector3(_inputMove.x, 0f, _inputMove.y);
         if (newDirection == Vector3.zero)
         {
-            _targetVelocityXZ -= _targetSpeed * _targetVelocityChangeRate * Time.deltaTime; //10 * 1 * 0.5
-            if (_targetVelocityXZ < 0)
+            _targetVelocityXZ -= MaxSpeed * _targetVelocityChangeRate * Time.deltaTime; //10 * 1 * 0.5
+            if (_targetVelocityXZ <= 0)
             {
                 _targetVelocityXZ = 0;
             }
         }
         else
         {
-            _targetVelocityXZ += _targetSpeed * _targetVelocityChangeRate * Time.deltaTime;
-            if (_targetVelocityXZ > _targetSpeed)
+            _targetVelocityXZ += MaxSpeed * _targetVelocityChangeRate * Time.deltaTime;
+            if (_targetVelocityXZ > MaxSpeed)
             {
-                _targetVelocityXZ = _targetSpeed;
+                _targetVelocityXZ = MaxSpeed;
             }
             //Use CameraRoots rotation, making forward always in front of the camera
             _targetDirection = Quaternion.Euler(0.0f, CameraRoot.rotation.eulerAngles.y, 0.0f) * newDirection;
             RootGeometry.transform.LookAt(_characterController.transform.position + _targetDirection);
         }
 
-        //Keep the direction to magnitude 1
-        _targetDirection.y = 0;
-        _targetDirection.Normalize();
-        //Multiply by whatever currentVelocity we target
-        _targetDirection *= _targetVelocityXZ;
-        _targetDirection.y = _targetVelocityY;
-        
-        _characterController.Move(_targetDirection * Time.deltaTime);
-
+        _targetMotion.x = _targetDirection.x * _targetVelocityXZ;
+        _targetMotion.z = _targetDirection.z * _targetVelocityXZ;
+    }
+    private void StopRun()
+    {
+        if(_targetVelocityXZ == 0)
+        {
+            StartIdle();
+        }
+        if (_inputJump)
+        {
+            StartRoll();
+        }
     }
 
-    private void AnimatePlayer()
+    private void StartRoll()
     {
+        _currentState = PlayerStates.Roll;
+        _characterAnimator.Play("Roll");
+    }
+    private void Roll()
+    {
+        StopRoll();
+        _targetMotion.x = _targetDirection.x * RollLength;
+        _targetMotion.z = _targetDirection.z * RollLength;
+    }
+    private void StopRoll()
+    {
+        StartRun();
+    }
 
+    private void StartFall() 
+    {
+        _currentState = PlayerStates.Fall;
+        _characterAnimator.Play("Fall");
+    }
+    private void Fall()
+    {
+        StopFall();
+    }
+    private void StopFall()
+    {
         if (_characterController.isGrounded)
         {
-            _targetVelocityY = 0;
-            _characterAnimator.SetBool("isJumping", false);
-            if (_targetVelocityXZ <= 0)
-            {
-                _characterAnimator.SetBool("isJogging", false);
-                _characterAnimator.SetBool("isRunning", false);
-            }
-            else if (_targetVelocityXZ <= MaxSpeed)
-            {
-                _characterAnimator.SetBool("isJogging", true);
-                _characterAnimator.SetBool("isRunning", false);
-            }
-            else if (_targetVelocityXZ <= MaxDashSpeed)
-            {
-                _characterAnimator.SetBool("isRunning", true);
-            }
+            StartIdle();
         }
+    }
 
-        if (_targetVelocityY > 0)
-        {
-            _characterAnimator.SetBool("isJumping", true);
-        }
-
-        if(_targetVelocityY <= -7)
-        {
-            _playerFalling = true;
-        }
-
+    //LastSteps
+    void Move()
+    {
+        _targetMotion.y = _targetVelocityY;
+        _characterController.Move(_targetMotion * Time.deltaTime);
     }
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
 
-    }
-
-    public void KnockBack(Vector3 knockBackDirection, float knockBackDuration = 0.5f, float knockBackForce = 10f)
-    {
-        if(_knockBackCounter <= 0)
-        {
-            _targetDirection = knockBackDirection;
-            _knockBackCounter = knockBackDuration;
-            _targetVelocityXZ = knockBackForce;
-        }
     }
 }
