@@ -64,23 +64,12 @@ public class BasicPlayerController : MonoBehaviour
         _playerInputs.CharacterControls.Move.started += OnMoveInput;
         _playerInputs.CharacterControls.Move.performed += OnMoveInput;
         _playerInputs.CharacterControls.Move.canceled += OnMoveInput;
-
         _playerInputs.CharacterControls.Jump.started += OnJumpInput;
         _playerInputs.CharacterControls.Jump.canceled += OnJumpInput;
 
         _playerInputs.CharacterControls.Look.started += OnLookInput;
         _playerInputs.CharacterControls.Look.performed += OnLookInput;
         _playerInputs.CharacterControls.Look.canceled += OnLookInput;
-    }
-
-    private void OnEnable()
-    {
-        _playerInputs.Enable();
-    }
-
-    private void OnDisable()
-    {
-        _playerInputs.Disable();
     }
 
     private void OnMoveInput(InputAction.CallbackContext context)
@@ -95,13 +84,19 @@ public class BasicPlayerController : MonoBehaviour
 
     private void OnJumpInput(InputAction.CallbackContext context)
     {
-        _inputJump = false;
-        if (context.action.WasPressedThisFrame())
-        {
-            Debug.Log("Jump Pressed");
-            _inputJump = true;
-        }
+        _inputJump = context.ReadValueAsButton();
     }
+
+    private void OnEnable()
+    {
+        _playerInputs.Enable();
+    }
+
+    private void OnDisable()
+    {
+        _playerInputs.Disable();
+    }
+
 
     void Start()
     {
@@ -139,7 +134,7 @@ public class BasicPlayerController : MonoBehaviour
         RaycastHit hit;
         Vector3 dir = MainCamera.transform.position - CameraRoot.transform.position;
         bool collided = Physics.Raycast(CameraRoot.transform.position, dir.normalized, out hit, _maxCameraDistance, layerMask);
-        if (collided && hit.collider.name != "PlayerCharacter")
+        if (collided && hit.collider.tag != "Player")
         {
             MainCamera.transform.localPosition = CameraRoot.transform.InverseTransformPoint(hit.point);
         }
@@ -211,7 +206,7 @@ public class BasicPlayerController : MonoBehaviour
         _currentState = PlayerStates.Jump;
         _characterAnimator.Play("Jump");
         _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
-
+        _inputJump = false;
     }
     private void Jump()
     {
@@ -281,6 +276,7 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Roll;
         _characterAnimator.Play("Roll");
+        _inputJump = false;
     }
     private void Roll()
     {
@@ -290,7 +286,14 @@ public class BasicPlayerController : MonoBehaviour
     }
     private void StopRoll()
     {
-        StartRun();
+        if (!IsAnimatorPlaying())
+        {
+            StartRun();
+        }
+        else if (!_characterController.isGrounded) 
+        {
+            StartJump();
+        }
     }
 
     private void StartFall() 
@@ -320,5 +323,10 @@ public class BasicPlayerController : MonoBehaviour
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
 
+    }
+
+    private bool IsAnimatorPlaying()
+    {
+        return _characterAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1;
     }
 }
