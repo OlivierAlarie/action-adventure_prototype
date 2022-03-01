@@ -20,8 +20,8 @@ public class BasicPlayerController : MonoBehaviour
     private Vector3 _originalCameraLocalPosition;
 
     [Header("Character")]
-    public Animator _characterAnimator;
-    public CharacterController _characterController;
+    public Animator _playerAnimator;
+    public CharacterController _playerController;
     public float MaxSpeed = 5f; //Target speed for the character
     public float TimeToMaxSpeed = 1f;//Time to reach max speed (in Seconds)
     public float RollLength = 10f;
@@ -37,7 +37,8 @@ public class BasicPlayerController : MonoBehaviour
     private PlayerInput _playerInputs;
     private Vector2 _inputMove;
     private Vector2 _inputLook;
-    private bool _inputJump = false;
+    private bool _inputJump;
+    private bool _inputAttack;
 
     private Vector3 _targetDirection = Vector3.zero;
     private Vector3 _targetMotion = Vector3.zero;
@@ -54,7 +55,9 @@ public class BasicPlayerController : MonoBehaviour
         Jump,
         Run,
         Roll,
-        Fall
+        Fall,
+        Attack,
+        Hurt
     }
 
     private void Awake()
@@ -64,12 +67,16 @@ public class BasicPlayerController : MonoBehaviour
         _playerInputs.CharacterControls.Move.started += OnMoveInput;
         _playerInputs.CharacterControls.Move.performed += OnMoveInput;
         _playerInputs.CharacterControls.Move.canceled += OnMoveInput;
+
         _playerInputs.CharacterControls.Jump.started += OnJumpInput;
         _playerInputs.CharacterControls.Jump.canceled += OnJumpInput;
 
         _playerInputs.CharacterControls.Look.started += OnLookInput;
         _playerInputs.CharacterControls.Look.performed += OnLookInput;
         _playerInputs.CharacterControls.Look.canceled += OnLookInput;
+
+        _playerInputs.CharacterControls.Attack.started += OnAttackInput;
+        _playerInputs.CharacterControls.Attack.canceled += OnAttackInput;
     }
 
     private void OnMoveInput(InputAction.CallbackContext context)
@@ -85,6 +92,11 @@ public class BasicPlayerController : MonoBehaviour
     private void OnJumpInput(InputAction.CallbackContext context)
     {
         _inputJump = context.ReadValueAsButton();
+    }
+
+    private void OnAttackInput(InputAction.CallbackContext context)
+    {
+        _inputAttack = context.ReadValueAsButton();
     }
 
     private void OnEnable()
@@ -146,7 +158,7 @@ public class BasicPlayerController : MonoBehaviour
 
     void RunGravity()
     {
-        if (!_characterController.isGrounded)
+        if (!_playerController.isGrounded)
         {
             _targetVelocityY += Gravity * Time.deltaTime;
             if (_targetVelocityY < _terminalVelocityY)
@@ -179,16 +191,20 @@ public class BasicPlayerController : MonoBehaviour
             case PlayerStates.Fall:
                 Fall();
                 break;
+            case PlayerStates.Attack:
+                Attack();
+                break;
+            case PlayerStates.Hurt:
+                Hurt();
+                break;
         }
-        //Debug.Log(_currentState);
     }
 
     private void StartIdle() 
     {
         _currentState = PlayerStates.Idle;
-        _characterAnimator.Play("Idle");
-        _targetMotion.x = 0;
-        _targetMotion.z = 0;
+        _playerAnimator.Play("Idle");
+        ClearMotion();
     }
     private void Idle() 
     {
@@ -196,15 +212,16 @@ public class BasicPlayerController : MonoBehaviour
     }
     private void StopIdle()
     {
-        if (!_characterController.isGrounded) { StartFall(); }
+        if (!_playerController.isGrounded) { StartFall(); }
         else if (_inputMove.x != 0 || _inputMove.y != 0) { StartRun(); }
         else if (_inputJump) { StartJump(); }
+        else if (_inputAttack) { StartAttack(); }
     }
 
     private void StartJump() 
     {
         _currentState = PlayerStates.Jump;
-        _characterAnimator.Play("Jump");
+        _playerAnimator.Play("Jump");
         _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
         _inputJump = false;
     }
@@ -216,7 +233,7 @@ public class BasicPlayerController : MonoBehaviour
     {
         if(_targetVelocityY <= 0)
         {
-            if (!_characterController.isGrounded)
+            if (!_playerController.isGrounded)
             {
                 StartFall();
             }
@@ -230,12 +247,10 @@ public class BasicPlayerController : MonoBehaviour
     private void StartRun()
     {
         _currentState = PlayerStates.Run;
-        _characterAnimator.Play("Run");
+        _playerAnimator.Play("Run");
     }
     private void Run()
     {
-        StopRun();
-
         Vector3 newDirection = new Vector3(_inputMove.x, 0f, _inputMove.y);
         if (newDirection == Vector3.zero)
         {
@@ -254,11 +269,13 @@ public class BasicPlayerController : MonoBehaviour
             }
             //Use CameraRoots rotation, making forward always in front of the camera
             _targetDirection = Quaternion.Euler(0.0f, CameraRoot.rotation.eulerAngles.y, 0.0f) * newDirection;
-            RootGeometry.transform.LookAt(_characterController.transform.position + _targetDirection);
+            RootGeometry.transform.LookAt(_playerController.transform.position + _targetDirection);
         }
 
         _targetMotion.x = _targetDirection.x * _targetVelocityXZ;
         _targetMotion.z = _targetDirection.z * _targetVelocityXZ;
+
+        StopRun();
     }
     private void StopRun()
     {
@@ -266,40 +283,49 @@ public class BasicPlayerController : MonoBehaviour
         {
             StartIdle();
         }
-        if (_inputJump)
+        else if (_inputJump)
         {
             StartRoll();
         }
+        else if (_inputAttack) 
+        { 
+            StartAttack(); 
+        }
+
     }
 
     private void StartRoll()
     {
         _currentState = PlayerStates.Roll;
-        _characterAnimator.Play("Roll");
+        _playerAnimator.Play("Roll");
         _inputJump = false;
     }
     private void Roll()
     {
-        StopRoll();
         _targetMotion.x = _targetDirection.x * RollLength;
         _targetMotion.z = _targetDirection.z * RollLength;
+
+        StopRoll();
     }
     private void StopRoll()
     {
-        if (!IsAnimatorPlaying())
+        if (IsAnimatorMatchingState("Roll"))
         {
-            StartRun();
-        }
-        else if (!_characterController.isGrounded) 
-        {
-            StartJump();
+            if (!IsAnimatorPlaying())
+            {
+                StartRun();
+            }
+            else if (!_playerController.isGrounded)
+            {
+                StartJump();
+            }
         }
     }
 
     private void StartFall() 
     {
         _currentState = PlayerStates.Fall;
-        _characterAnimator.Play("Fall");
+        _playerAnimator.Play("Fall");
     }
     private void Fall()
     {
@@ -307,26 +333,72 @@ public class BasicPlayerController : MonoBehaviour
     }
     private void StopFall()
     {
-        if (_characterController.isGrounded)
+        if (_playerController.isGrounded)
         {
             StartIdle();
         }
     }
 
-    //LastSteps
+    private void StartAttack()
+    {
+        _currentState = PlayerStates.Attack;
+        _playerAnimator.Play("Attack");
+        _inputAttack = false;
+        ClearMotion();
+    }
+    private void Attack()
+    {
+        if (IsAnimatorMatchingState("Attack"))
+        {
+            if (!IsAnimatorPlaying())
+            {
+                StartIdle();
+            }
+        }
+    }
+    private void StopAttack()
+    {
+
+    }
+
+    private void StartHurt()
+    {
+
+    }
+    private void Hurt()
+    {
+
+    }
+    private void StopHurt()
+    {
+
+    }
+    
+
     void Move()
     {
         _targetMotion.y = _targetVelocityY;
-        _characterController.Move(_targetMotion * Time.deltaTime);
+        _playerController.Move(_targetMotion * Time.deltaTime);
     }
 
-    private void OnControllerColliderHit(ControllerColliderHit hit)
+    void SetMotion(float speed)
     {
+        _targetMotion.x = _targetDirection.x * speed;
+        _targetMotion.z = _targetDirection.z * speed;
+    }
 
+    void ClearMotion()
+    {
+        _targetMotion.x = 0;
+        _targetMotion.z = 0;
     }
 
     private bool IsAnimatorPlaying()
     {
-        return _characterAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1;
+        return _playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1;
+    }
+    private bool IsAnimatorMatchingState(string stateName)
+    {
+        return _playerAnimator.GetCurrentAnimatorStateInfo(0).IsName(stateName);
     }
 }
