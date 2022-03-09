@@ -23,11 +23,13 @@ public class BasicPlayerController : MonoBehaviour
     public Animator _playerAnimator;
     public CharacterController _playerController;
     public float MaxSpeed = 5f; //Target speed for the character
-    public float TimeToMaxSpeed = 1f;//Time to reach max speed (in Seconds)
-    public float RollLength = 10f;
+    public float SpeedChangeFactor = 5f;//Acceleration/Decceleration
+    public float RollSpeed = 10f;//Target speed during roll
+    public float JumpSpeed = 25f;
     public float JumpHeight = 1f; //Target height for the character
     public float JumpLeniency = 0.15f; // Seconds of leniency where a jump attempt is registered before reaching the ground / after leaving the ground without jumping
     public float Gravity = -9.81f;
+    public float MaxDistanceTargetLock;
     public Transform LastCheckpoint;
 
     [Header("Model")]
@@ -40,10 +42,9 @@ public class BasicPlayerController : MonoBehaviour
     private bool _inputJump;
     private bool _inputAttack;
 
-    private Vector3 _targetDirection = Vector3.zero;
-    private Vector3 _targetMotion = Vector3.zero;
-    private float _targetVelocityXZ = 0f;
-    private float _targetVelocityChangeRate = 0f;
+    private Vector3 _moveDirection = Vector3.zero;
+    private Vector3 _moveMotion = Vector3.zero;
+    [SerializeField] private float _targetVelocityXZ = 0f;
     private float _targetVelocityY = 0f;
     private float _terminalVelocityY = -53f;
 
@@ -117,7 +118,6 @@ public class BasicPlayerController : MonoBehaviour
         _originalCameraLocalPosition = MainCamera.transform.localPosition;
         _maxCameraDistance = Vector3.Distance(CameraRoot.transform.position, MainCamera.transform.position);
 
-        _targetVelocityChangeRate = 1 / TimeToMaxSpeed;
         StartIdle();
     }
 
@@ -130,6 +130,22 @@ public class BasicPlayerController : MonoBehaviour
         RunStates();
         Move();
     }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Vector3 v = CameraRoot.forward;
+        v.y = 0;
+        Gizmos.DrawLine(transform.position, transform.position+v.normalized);
+        Gizmos.color = Color.yellow;
+        /*
+         * If an enemy is targeted, draw a sphere at the position
+         * 
+         * 
+         * 
+         * 
+         */
+    }
     void RunCamera()
     {
         //Calculate Camera Rotation based of mouse movement
@@ -139,7 +155,7 @@ public class BasicPlayerController : MonoBehaviour
         //Clamp Vertical Rotation
         _targetRotationV = Mathf.Clamp(_targetRotationV, MaxUpwardAngle, MaxDownwardAngle);
 
-        CameraRoot.transform.rotation = Quaternion.Euler(_targetRotationV, _targetRotationH, 0.0f);
+        CameraRoot.rotation = Quaternion.Euler(_targetRotationV, _targetRotationH, 0.0f);
         //Check for Environement Collision
         int layerMask = 1 << 6;
         layerMask = ~layerMask;
@@ -198,6 +214,7 @@ public class BasicPlayerController : MonoBehaviour
                 Hurt();
                 break;
         }
+        //Debug.Log("Current State : " + _currentState);
     }
 
     private void StartIdle() 
@@ -224,6 +241,7 @@ public class BasicPlayerController : MonoBehaviour
         _playerAnimator.Play("Jump");
         _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
         _inputJump = false;
+        Debug.Log("Current State : " + _currentState);
     }
     private void Jump()
     {
@@ -248,32 +266,34 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Run;
         _playerAnimator.Play("Run");
+        Debug.Log("Current State : " + _currentState);
     }
     private void Run()
     {
         Vector3 newDirection = new Vector3(_inputMove.x, 0f, _inputMove.y);
         if (newDirection == Vector3.zero)
         {
-            _targetVelocityXZ -= MaxSpeed * _targetVelocityChangeRate * Time.deltaTime; //10 * 1 * 0.5
-            if (_targetVelocityXZ <= 0)
+            _targetVelocityXZ = Mathf.Lerp(_targetVelocityXZ, 0, Time.deltaTime * SpeedChangeFactor); //10 * 1 * 0.5
+            if (_targetVelocityXZ < 0.1f)
             {
                 _targetVelocityXZ = 0;
             }
         }
         else
         {
-            _targetVelocityXZ += MaxSpeed * _targetVelocityChangeRate * Time.deltaTime;
-            if (_targetVelocityXZ > MaxSpeed)
+            _targetVelocityXZ = Mathf.Lerp(_targetVelocityXZ, MaxSpeed, Time.deltaTime * SpeedChangeFactor);
+            if (_targetVelocityXZ > MaxSpeed - 0.1f)
             {
                 _targetVelocityXZ = MaxSpeed;
             }
-            //Use CameraRoots rotation, making forward always in front of the camera
-            _targetDirection = Quaternion.Euler(0.0f, CameraRoot.rotation.eulerAngles.y, 0.0f) * newDirection;
-            RootGeometry.transform.LookAt(_playerController.transform.position + _targetDirection);
+            //Use CameraRoots rotation, making forward always in front of the camera, modified based on the inputs
+            _moveDirection = CameraRoot.rotation * newDirection;
+            _moveDirection.y = 0;
         }
 
-        _targetMotion.x = _targetDirection.x * _targetVelocityXZ;
-        _targetMotion.z = _targetDirection.z * _targetVelocityXZ;
+        RotateCharacter();
+
+        SetMotion(_targetVelocityXZ);
 
         StopRun();
     }
@@ -291,7 +311,10 @@ public class BasicPlayerController : MonoBehaviour
         { 
             StartAttack(); 
         }
-
+        else if (!_playerController.isGrounded)
+        {
+            StartFall();
+        }
     }
 
     private void StartRoll()
@@ -302,8 +325,13 @@ public class BasicPlayerController : MonoBehaviour
     }
     private void Roll()
     {
-        _targetMotion.x = _targetDirection.x * RollLength;
-        _targetMotion.z = _targetDirection.z * RollLength;
+        _targetVelocityXZ = Mathf.Lerp(_targetVelocityXZ, RollSpeed, Time.deltaTime * 25);
+        if (_targetVelocityXZ > RollSpeed - 0.1f)
+        {
+            _targetVelocityXZ = RollSpeed;
+        }
+
+        SetMotion(_targetVelocityXZ);
 
         StopRoll();
     }
@@ -317,6 +345,7 @@ public class BasicPlayerController : MonoBehaviour
             }
             else if (!_playerController.isGrounded)
             {
+                SetMotion(JumpSpeed);
                 StartJump();
             }
         }
@@ -326,6 +355,7 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Fall;
         _playerAnimator.Play("Fall");
+        Debug.Log("Current State : " + _currentState);
     }
     private void Fall()
     {
@@ -343,12 +373,29 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Attack;
         _playerAnimator.Play("Attack");
+        _playerAnimator.SetInteger("AttackLevel", 1);
+        //CheckEnemy ? Default to where the camera points
+        _moveDirection = CameraRoot.rotation * Vector3.forward;
+        _moveDirection.y = 0;
         _inputAttack = false;
+        RotateCharacter();
         ClearMotion();
     }
     private void Attack()
     {
         if (IsAnimatorMatchingState("Attack"))
+        {
+            if (!IsAnimatorPlaying())
+            {
+                StartIdle();
+            }
+            else if (_inputAttack)
+            {
+                _playerAnimator.SetInteger("AttackLevel",2);
+                _inputAttack = false;
+            }
+        }
+        else if (IsAnimatorMatchingState("Attack2"))
         {
             if (!IsAnimatorPlaying())
             {
@@ -377,20 +424,25 @@ public class BasicPlayerController : MonoBehaviour
 
     void Move()
     {
-        _targetMotion.y = _targetVelocityY;
-        _playerController.Move(_targetMotion * Time.deltaTime);
+        _moveMotion.y = _targetVelocityY;
+        _playerController.Move(_moveMotion * Time.deltaTime);
     }
 
     void SetMotion(float speed)
     {
-        _targetMotion.x = _targetDirection.x * speed;
-        _targetMotion.z = _targetDirection.z * speed;
+        _moveMotion.x = _moveDirection.x * speed;
+        _moveMotion.z = _moveDirection.z * speed;
     }
 
     void ClearMotion()
     {
-        _targetMotion.x = 0;
-        _targetMotion.z = 0;
+        _moveMotion.x = 0;
+        _moveMotion.z = 0;
+    }
+
+    void RotateCharacter()
+    {
+        RootGeometry.transform.LookAt(_playerController.transform.position + _moveDirection);
     }
 
     private bool IsAnimatorPlaying()
