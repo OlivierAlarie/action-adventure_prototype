@@ -29,7 +29,8 @@ public class BasicPlayerController : MonoBehaviour
     public float JumpHeight = 1f; //Target height for the character
     public float JumpLeniency = 0.15f; // Seconds of leniency where a jump attempt is registered before reaching the ground / after leaving the ground without jumping
     public float Gravity = -9.81f;
-    public float MaxDistanceTargetLock;
+    public float MaxDistanceTargetLock; //Max distance to acquire target
+    public float DistanceFromTarget;//Distance to reach from target when attacking
     public Transform LastCheckpoint;
 
     [Header("Model")]
@@ -47,6 +48,7 @@ public class BasicPlayerController : MonoBehaviour
     [SerializeField] private float _targetVelocityXZ = 0f;
     private float _targetVelocityY = 0f;
     private float _terminalVelocityY = -53f;
+    private GameObject _currentTarget;
 
     private PlayerStates _currentState;
 
@@ -58,7 +60,8 @@ public class BasicPlayerController : MonoBehaviour
         Roll,
         Fall,
         Attack,
-        Hurt
+        Hurt,
+        Push
     }
 
     private void Awake()
@@ -126,6 +129,7 @@ public class BasicPlayerController : MonoBehaviour
     {
         if (PauseMenu.GameIsPaused) { return; }
         RunCamera();
+        RunTargeter();
         RunGravity();
         RunStates();
         Move();
@@ -133,11 +137,23 @@ public class BasicPlayerController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
+        
         Vector3 v = CameraRoot.forward;
         v.y = 0;
-        Gizmos.DrawLine(transform.position, transform.position+v.normalized);
-        Gizmos.color = Color.yellow;
+        v.Normalize();
+        //new Vector3(transform.localScale.x,transform.localScale.y,MaxDistanceTargetLock)
+        if(_currentTarget != null)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawRay(transform.position,_currentTarget.transform.position-transform.position);
+            Gizmos.DrawWireSphere(_currentTarget.transform.position, 1);
+        }
+        else
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawRay(transform.position, v);
+        }
+        
         /*
          * If an enemy is targeted, draw a sphere at the position
          * 
@@ -169,6 +185,38 @@ public class BasicPlayerController : MonoBehaviour
         else
         {
             MainCamera.transform.localPosition = _originalCameraLocalPosition;
+        }
+    }
+
+    void RunTargeter()
+    {
+        if(_currentState == PlayerStates.Attack) { return; }
+        //Grab Nearest Enemy
+        RaycastHit hit;
+        Vector3 v = CameraRoot.forward;
+        v.y = 0;
+        v.Normalize();
+        //Catch Only Enemy layer
+        int lm = 1 << 7;
+        bool enemyCollided = Physics.SphereCast(transform.position, 0.5f, v, out hit, MaxDistanceTargetLock,lm);
+        //Catch everything but things that ignore the camera
+        lm = 1 << 6;
+        lm = ~lm;
+        bool obstructed = Physics.Raycast(transform.position, v, hit.distance,lm);
+        if (enemyCollided)
+        {
+            _currentTarget = hit.collider.gameObject;
+        }
+        if (obstructed)
+        {
+            _currentTarget = null;
+        }
+        if (_currentTarget != null)
+        {
+            if (Vector3.Distance(transform.position, _currentTarget.transform.position) > MaxDistanceTargetLock)
+            {
+                _currentTarget = null;
+            }
         }
     }
 
@@ -214,7 +262,6 @@ public class BasicPlayerController : MonoBehaviour
                 Hurt();
                 break;
         }
-        //Debug.Log("Current State : " + _currentState);
     }
 
     private void StartIdle() 
@@ -241,7 +288,6 @@ public class BasicPlayerController : MonoBehaviour
         _playerAnimator.Play("Jump");
         _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
         _inputJump = false;
-        Debug.Log("Current State : " + _currentState);
     }
     private void Jump()
     {
@@ -266,7 +312,6 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Run;
         _playerAnimator.Play("Run");
-        Debug.Log("Current State : " + _currentState);
     }
     private void Run()
     {
@@ -274,7 +319,7 @@ public class BasicPlayerController : MonoBehaviour
         if (newDirection == Vector3.zero)
         {
             _targetVelocityXZ = Mathf.Lerp(_targetVelocityXZ, 0, Time.deltaTime * SpeedChangeFactor); //10 * 1 * 0.5
-            if (_targetVelocityXZ < 0.1f)
+            if (_targetVelocityXZ < 0.5f)
             {
                 _targetVelocityXZ = 0;
             }
@@ -291,9 +336,9 @@ public class BasicPlayerController : MonoBehaviour
             _moveDirection.y = 0;
         }
 
-        RotateCharacter();
-
         SetMotion(_targetVelocityXZ);
+
+        RotateCharacter();
 
         StopRun();
     }
@@ -341,6 +386,7 @@ public class BasicPlayerController : MonoBehaviour
         {
             if (!IsAnimatorPlaying())
             {
+                _targetVelocityXZ = MaxSpeed;
                 StartRun();
             }
             else if (!_playerController.isGrounded)
@@ -355,7 +401,6 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Fall;
         _playerAnimator.Play("Fall");
-        Debug.Log("Current State : " + _currentState);
     }
     private void Fall()
     {
@@ -375,14 +420,34 @@ public class BasicPlayerController : MonoBehaviour
         _playerAnimator.Play("Attack");
         _playerAnimator.SetInteger("AttackLevel", 1);
         //CheckEnemy ? Default to where the camera points
-        _moveDirection = CameraRoot.rotation * Vector3.forward;
+        ClearMotion();
+        if(_currentTarget != null)
+        {
+            Vector3 v = (_currentTarget.transform.position - transform.position);
+            _moveDirection = v;
+            if(Vector3.Distance(_currentTarget.transform.position, transform.position) <= DistanceFromTarget)
+            {
+                ClearMotion();
+            }
+            else
+            {
+                SetMotion(60 / v.magnitude);
+            }
+        }
+        else
+        {
+            _moveDirection = CameraRoot.rotation * Vector3.forward;
+        }
         _moveDirection.y = 0;
         _inputAttack = false;
         RotateCharacter();
-        ClearMotion();
     }
     private void Attack()
     {
+        if(_currentTarget != null && Vector3.Distance(_currentTarget.transform.position,transform.position) <= DistanceFromTarget)
+        {
+            ClearMotion();
+        }
         if (IsAnimatorMatchingState("Attack"))
         {
             if (!IsAnimatorPlaying())
@@ -421,6 +486,21 @@ public class BasicPlayerController : MonoBehaviour
 
     }
     
+    private void StartPush()
+    {
+        _currentState = PlayerStates.Push;
+        _playerAnimator.Play("Push");
+        ClearMotion();
+    }
+    private void Push()
+    {
+
+    }
+    private void StopPush()
+    {
+
+    }
+
 
     void Move()
     {

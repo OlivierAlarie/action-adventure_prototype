@@ -39,7 +39,7 @@ public class EnemyFollow : MonoBehaviour
     {
         if (_currentState == AiState.Wandering)
         {
-            transform.position = Vector2.MoveTowards(transform.position, _pointTogo, _speed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, _pointTogo, _speed * Time.deltaTime);
             if (Vector3.Distance(transform.position, _pointTogo) < _range)
             {
                 SetDestination();
@@ -53,7 +53,7 @@ public class EnemyFollow : MonoBehaviour
 
         else if (_currentState == AiState.Following)
         {
-            transform.position = Vector2.MoveTowards(transform.position, Player.transform.position, _speed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, Player.transform.position, _speed * Time.deltaTime);
             FollowingEnemy = true;
             if (Vector2.Distance(transform.position, Player.transform.position) >= _boundry)
             {
