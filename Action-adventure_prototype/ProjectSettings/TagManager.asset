@@ -6,7 +6,7 @@ TagManager:
   tags:
   - Enemy
   - PlayerWeapon
-  - Cube
+  - PushableObject
   layers:
   - Default
   - TransparentFX

@@ -29,7 +29,10 @@ public class Skeleton: MonoBehaviour
     }
     void Start()
     {  
-        _agent = GetComponent<NavMeshAgent>();
+        if(_agent == null)
+        {
+            _agent = GetComponent<NavMeshAgent>();
+        }
         _currentState = AiState.Wandering;
         SetDestination(_pointTogo.transform.position);
 

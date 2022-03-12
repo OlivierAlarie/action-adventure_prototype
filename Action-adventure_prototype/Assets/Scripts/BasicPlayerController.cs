@@ -18,6 +18,7 @@ public class BasicPlayerController : MonoBehaviour
     private float _targetRotationV = 0;
     private float _maxCameraDistance;
     private Vector3 _originalCameraLocalPosition;
+    private bool _cameraLocked;
 
     [Header("Character")]
     public Animator _playerAnimator;
@@ -49,6 +50,7 @@ public class BasicPlayerController : MonoBehaviour
     private float _targetVelocityY = 0f;
     private float _terminalVelocityY = -53f;
     private GameObject _currentTarget;
+    private PushableObject _pushableObject;
 
     private PlayerStates _currentState;
 
@@ -128,10 +130,16 @@ public class BasicPlayerController : MonoBehaviour
     void Update()
     {
         if (PauseMenu.GameIsPaused) { return; }
+
         RunCamera();
+
         RunTargeter();
+
         RunGravity();
+
         RunStates();
+
+        if(!_playerController.enabled) { return; }
         Move();
     }
 
@@ -141,7 +149,6 @@ public class BasicPlayerController : MonoBehaviour
         Vector3 v = CameraRoot.forward;
         v.y = 0;
         v.Normalize();
-        //new Vector3(transform.localScale.x,transform.localScale.y,MaxDistanceTargetLock)
         if(_currentTarget != null)
         {
             Gizmos.color = Color.green;
@@ -153,17 +160,10 @@ public class BasicPlayerController : MonoBehaviour
             Gizmos.color = Color.red;
             Gizmos.DrawRay(transform.position, v);
         }
-        
-        /*
-         * If an enemy is targeted, draw a sphere at the position
-         * 
-         * 
-         * 
-         * 
-         */
     }
     void RunCamera()
     {
+        if (_cameraLocked) return;
         //Calculate Camera Rotation based of mouse movement
         _targetRotationH += _inputLook.x * CameraSensitivityX * Time.deltaTime;
         _targetRotationV += _inputLook.y * CameraSensitivityY * Time.deltaTime;
@@ -261,6 +261,9 @@ public class BasicPlayerController : MonoBehaviour
             case PlayerStates.Hurt:
                 Hurt();
                 break;
+            case PlayerStates.Push:
+                Push();
+                break;
         }
     }
 
@@ -350,7 +353,14 @@ public class BasicPlayerController : MonoBehaviour
         }
         else if (_inputJump)
         {
-            StartRoll();
+            if(_pushableObject != null)
+            {
+                StartPush();
+            }
+            else
+            {
+                StartRoll();
+            }
         }
         else if (_inputAttack) 
         { 
@@ -448,6 +458,10 @@ public class BasicPlayerController : MonoBehaviour
         {
             ClearMotion();
         }
+        StopAttack();
+    }
+    private void StopAttack()
+    {
         if (IsAnimatorMatchingState("Attack"))
         {
             if (!IsAnimatorPlaying())
@@ -456,7 +470,7 @@ public class BasicPlayerController : MonoBehaviour
             }
             else if (_inputAttack)
             {
-                _playerAnimator.SetInteger("AttackLevel",2);
+                _playerAnimator.SetInteger("AttackLevel", 2);
                 _inputAttack = false;
             }
         }
@@ -468,14 +482,11 @@ public class BasicPlayerController : MonoBehaviour
             }
         }
     }
-    private void StopAttack()
-    {
-
-    }
 
     private void StartHurt()
     {
-
+        _currentState = PlayerStates.Hurt;
+        _playerAnimator.Play("Hurt");
     }
     private void Hurt()
     {
@@ -490,15 +501,70 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Push;
         _playerAnimator.Play("Push");
+        _cameraLocked = true;
+        Vector3 v = _pushableObject.transform.position;
+        Vector3 s = _pushableObject.transform.localScale/2;
+
+        //check where the character is compared to the pushable object
+
+        if(v.x+s.x < transform.position.x)
+        {
+            RootGeometry.transform.LookAt(Vector3.left+transform.position);
+        }
+        else if(v.x-s.x > transform.position.x)
+        {
+            RootGeometry.transform.LookAt(Vector3.right+transform.position);
+        }
+        else if(v.z+s.z < transform.position.z)
+        {
+            RootGeometry.transform.LookAt(Vector3.back + transform.position);
+        }
+        else if(v.z-s.z > transform.position.z)
+        {
+            RootGeometry.transform.LookAt(Vector3.forward + transform.position);
+        }
+
+        CameraRoot.rotation = RootGeometry.rotation;
         ClearMotion();
+        transform.parent = _pushableObject.transform;
+        _playerController.enabled = false;
     }
     private void Push()
     {
+        Vector3 newDirection = new Vector3(_inputMove.x, 0f, _inputMove.y);
+        if(newDirection.z > 0)
+        {
+            //Push Forward 
+            _pushableObject.Push(RootGeometry.forward);
+        }
+        else if(newDirection.z < 0)
+        {
+            //Push Backward
+            _pushableObject.Push(RootGeometry.forward*-1);
+        }
+        else if(newDirection.x < 0)
+        {
+            //Push Left
+            _pushableObject.Push(RootGeometry.right*-1);
+        }
+        else if(newDirection.x > 0)
+        {
+            //Push Right
+            _pushableObject.Push(RootGeometry.right);
+        }
 
+
+        StopPush();
     }
     private void StopPush()
     {
-
+        if (!_inputJump)
+        {
+            transform.parent = null;
+            _playerController.enabled = true;
+            _cameraLocked = false;
+            StartIdle();
+        }
     }
 
 
@@ -532,5 +598,21 @@ public class BasicPlayerController : MonoBehaviour
     private bool IsAnimatorMatchingState(string stateName)
     {
         return _playerAnimator.GetCurrentAnimatorStateInfo(0).IsName(stateName);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.tag == "PushableObject")
+        {
+            _pushableObject = other.gameObject.GetComponent<PushableObject>();
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.tag == "PushableObject")
+        {
+            _pushableObject = null;
+        }
     }
 }
