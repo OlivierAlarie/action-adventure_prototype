@@ -32,6 +32,7 @@ public class BasicPlayerController : MonoBehaviour
     public float Gravity = -9.81f;
     public float MaxDistanceTargetLock; //Max distance to acquire target
     public float DistanceFromTarget;//Distance to reach from target when attacking
+    public bool CanPushSideways;
     public Transform LastCheckpoint;
 
     [Header("Model")]
@@ -143,7 +144,7 @@ public class BasicPlayerController : MonoBehaviour
         Move();
     }
 
-    private void OnDrawGizmos()
+    private void OnDrawGizmosSelected()
     {
         
         Vector3 v = CameraRoot.forward;
@@ -464,22 +465,26 @@ public class BasicPlayerController : MonoBehaviour
     {
         if (IsAnimatorMatchingState("Attack"))
         {
-            if (!IsAnimatorPlaying())
+            if (_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0.65f && _inputAttack)
             {
-                StartIdle();
-            }
-            else if (_inputAttack)
-            {
-                _playerAnimator.SetInteger("AttackLevel", 2);
+                _playerAnimator.Play("Attack2");
                 _inputAttack = false;
             }
+
         }
         else if (IsAnimatorMatchingState("Attack2"))
         {
-            if (!IsAnimatorPlaying())
+            if (_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0.65f && _inputAttack)
             {
-                StartIdle();
+                _playerAnimator.Play("Attack");
+                _inputAttack = false;
             }
+        }
+
+
+        if (!IsAnimatorPlaying())
+        {
+            StartIdle();
         }
     }
 
@@ -542,12 +547,12 @@ public class BasicPlayerController : MonoBehaviour
             //Push Backward
             _pushableObject.Push(RootGeometry.forward*-1);
         }
-        else if(newDirection.x < 0)
+        else if(newDirection.x < 0 && CanPushSideways)
         {
             //Push Left
             _pushableObject.Push(RootGeometry.right*-1);
         }
-        else if(newDirection.x > 0)
+        else if(newDirection.x > 0 && CanPushSideways)
         {
             //Push Right
             _pushableObject.Push(RootGeometry.right);
