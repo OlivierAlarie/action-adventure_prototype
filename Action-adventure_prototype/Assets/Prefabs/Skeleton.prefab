@@ -312,7 +312,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6220619687514988051}
   m_LocalRotation: {x: -0.5000004, y: 0.49999967, z: 0.4999996, w: 0.5000003}
-  m_LocalPosition: {x: -1.2999992, y: 1.4500002, z: 0.81999946}
+  m_LocalPosition: {x: 0, y: 1.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -522,7 +522,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6220619687515275891}
   - component: {fileID: 6220619687528583955}
-  - component: {fileID: 6220619686464537120}
   m_Layer: 0
   m_Name: skeleton_mesh
   m_TagString: Untagged
@@ -538,7 +537,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6220619687514988115}
   m_LocalRotation: {x: 0.00000008146034, y: 0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.03, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -624,28 +623,6 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.07697904, y: 0.3884853, z: -0.04}
     m_Extent: {x: 1.2801541, y: 0.60780096, z: 0.39}
   m_DirtyAABB: 0
---- !u!195 &6220619686464537120
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6220619687514988115}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 1.816289
-  m_Speed: 3.5
-  m_Acceleration: 8
-  avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 0
-  m_AutoTraverseOffMeshLink: 0
-  m_AutoBraking: 1
-  m_AutoRepath: 0
-  m_Height: 5.3063507
-  m_BaseOffset: 2.6531754
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
 --- !u!1 &6220619687514988129
 GameObject:
   m_ObjectHideFlags: 0
@@ -850,6 +827,7 @@ GameObject:
   - component: {fileID: 6220619687515275789}
   - component: {fileID: 6220619687843707860}
   - component: {fileID: 6220619687515275790}
+  - component: {fileID: 1800474152}
   m_Layer: 0
   m_Name: Skeleton
   m_TagString: Untagged
@@ -864,7 +842,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6220619687514988141}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 50.45, y: 0.78, z: -39.44}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -905,14 +883,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 849250290aa4c634c82ea37374baaeff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _agent: {fileID: 6220619686464537120}
+  _agent: {fileID: 1800474152}
   _animator: {fileID: 6220619687843707860}
   _range: 5
-  _boundry: 5
+  _boundry: 10
   Player: {fileID: 0}
   _pointTogo: {fileID: 0}
   _pointTocome: {fileID: 0}
   FollowingEnemy: 0
+--- !u!195 &1800474152
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6220619687514988141}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.75
+  m_Speed: 3.5
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0
+  m_AutoTraverseOffMeshLink: 0
+  m_AutoBraking: 1
+  m_AutoRepath: 0
+  m_Height: 3
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!1 &6220619687514988143
 GameObject:
   m_ObjectHideFlags: 0

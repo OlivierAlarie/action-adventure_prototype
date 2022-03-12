@@ -91,7 +91,6 @@ public class Skeleton: MonoBehaviour
     void SetDestination(Vector3 point)
     {
         _agent.SetDestination(point);
-        _agent.destination = point;
         FaceTarget(point);
     }
 
