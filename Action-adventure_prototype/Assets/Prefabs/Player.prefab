@@ -413,6 +413,8 @@ MonoBehaviour:
   JumpLeniency: 0.15
   Gravity: -15
   MaxDistanceTargetLock: 0
+  DistanceFromTarget: 0
+  CanPushSideways: 0
   LastCheckpoint: {fileID: 0}
   RootGeometry: {fileID: 3287105236855796499}
   _targetVelocityXZ: 0
@@ -458,6 +460,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3996293549456023106}
   - component: {fileID: 2847756255449887557}
+  - component: {fileID: 3022323180645223403}
   - component: {fileID: 8569631846622745235}
   m_Layer: 6
   m_Name: Camera
@@ -524,6 +527,24 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &3022323180645223403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6342422482469000906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51676514b777b2245877f5a1c7646397, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  MainCamera: {fileID: 0}
+  CameraRoot: {fileID: 0}
+  CameraSensitivityX: 360
+  CameraSensitivityY: 360
+  MaxDownwardAngle: 20
+  MaxUpwardAngle: -60
 --- !u!81 &8569631846622745235
 AudioListener:
   m_ObjectHideFlags: 0

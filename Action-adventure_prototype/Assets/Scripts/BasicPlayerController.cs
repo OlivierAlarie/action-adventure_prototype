@@ -29,6 +29,7 @@ public class BasicPlayerController : MonoBehaviour
     public float JumpSpeed = 25f;
     public float JumpHeight = 1f; //Target height for the character
     public float JumpLeniency = 0.15f; // Seconds of leniency where a jump attempt is registered before reaching the ground / after leaving the ground without jumping
+    public float WallRunHeight = 1f;
     public float Gravity = -9.81f;
     public float MaxDistanceTargetLock; //Max distance to acquire target
     public float DistanceFromTarget;//Distance to reach from target when attacking
@@ -42,8 +43,9 @@ public class BasicPlayerController : MonoBehaviour
     private PlayerInput _playerInputs;
     private Vector2 _inputMove;
     private Vector2 _inputLook;
-    private bool _inputJump;
+    private bool _inputRoll;
     private bool _inputAttack;
+    private bool _inputBlock;
 
     private Vector3 _moveDirection = Vector3.zero;
     private Vector3 _moveMotion = Vector3.zero;
@@ -64,7 +66,8 @@ public class BasicPlayerController : MonoBehaviour
         Fall,
         Attack,
         Hurt,
-        Push
+        Push,
+        WallRun
     }
 
     private void Awake()
@@ -75,8 +78,8 @@ public class BasicPlayerController : MonoBehaviour
         _playerInputs.CharacterControls.Move.performed += OnMoveInput;
         _playerInputs.CharacterControls.Move.canceled += OnMoveInput;
 
-        _playerInputs.CharacterControls.Jump.started += OnJumpInput;
-        _playerInputs.CharacterControls.Jump.canceled += OnJumpInput;
+        _playerInputs.CharacterControls.Roll.started += OnRollInput;
+        _playerInputs.CharacterControls.Roll.canceled += OnRollInput;
 
         _playerInputs.CharacterControls.Look.started += OnLookInput;
         _playerInputs.CharacterControls.Look.performed += OnLookInput;
@@ -84,38 +87,41 @@ public class BasicPlayerController : MonoBehaviour
 
         _playerInputs.CharacterControls.Attack.started += OnAttackInput;
         _playerInputs.CharacterControls.Attack.canceled += OnAttackInput;
+
+        _playerInputs.CharacterControls.Block.started += OnBlockInput;
+        _playerInputs.CharacterControls.Block.canceled += OnBlockInput;
     }
 
+    #region Inputs
     private void OnMoveInput(InputAction.CallbackContext context)
     {
         _inputMove = context.ReadValue<Vector2>();
     }
-
     private void OnLookInput(InputAction.CallbackContext context)
     {
         _inputLook = context.ReadValue<Vector2>();
     }
-
-    private void OnJumpInput(InputAction.CallbackContext context)
+    private void OnRollInput(InputAction.CallbackContext context)
     {
-        _inputJump = context.ReadValueAsButton();
+        _inputRoll = context.ReadValueAsButton();
     }
-
     private void OnAttackInput(InputAction.CallbackContext context)
     {
         _inputAttack = context.ReadValueAsButton();
     }
-
+    private void OnBlockInput(InputAction.CallbackContext context)
+    {
+        _inputBlock = context.ReadValueAsButton();
+    }
     private void OnEnable()
     {
         _playerInputs.Enable();
     }
-
     private void OnDisable()
     {
         _playerInputs.Disable();
     }
-
+    #endregion
 
     void Start()
     {
@@ -265,6 +271,9 @@ public class BasicPlayerController : MonoBehaviour
             case PlayerStates.Push:
                 Push();
                 break;
+            case PlayerStates.WallRun:
+                WallRun();
+                break;
         }
     }
 
@@ -272,7 +281,7 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Idle;
         _playerAnimator.Play("Idle");
-        ClearMotion();
+        ClearHorizontalMotion();
     }
     private void Idle() 
     {
@@ -282,7 +291,7 @@ public class BasicPlayerController : MonoBehaviour
     {
         if (!_playerController.isGrounded) { StartFall(); }
         else if (_inputMove.x != 0 || _inputMove.y != 0) { StartRun(); }
-        else if (_inputJump) { StartJump(); }
+        else if (_inputRoll) { StartJump(); }
         else if (_inputAttack) { StartAttack(); }
     }
 
@@ -291,7 +300,7 @@ public class BasicPlayerController : MonoBehaviour
         _currentState = PlayerStates.Jump;
         _playerAnimator.Play("Jump");
         _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
-        _inputJump = false;
+        _inputRoll = false;
     }
     private void Jump()
     {
@@ -340,9 +349,9 @@ public class BasicPlayerController : MonoBehaviour
             _moveDirection.y = 0;
         }
 
-        SetMotion(_targetVelocityXZ);
+        SetHorizontalMotion(_targetVelocityXZ);
 
-        RotateCharacter();
+        RootGeometry.transform.LookAt(_playerController.transform.position + _moveDirection);
 
         StopRun();
     }
@@ -352,7 +361,7 @@ public class BasicPlayerController : MonoBehaviour
         {
             StartIdle();
         }
-        else if (_inputJump)
+        else if (_inputRoll)
         {
             if(_pushableObject != null)
             {
@@ -367,9 +376,65 @@ public class BasicPlayerController : MonoBehaviour
         { 
             StartAttack(); 
         }
+        else if (_inputBlock)
+        {
+            //RayCast towards direction
+            int lm = 1 << 8;
+            RaycastHit hit;
+            Ray[] rays = new Ray[4];
+            rays[0] = new Ray(transform.position, Vector3.forward);
+            rays[1] = new Ray(transform.position, Vector3.back);
+            rays[2] = new Ray(transform.position, Vector3.left);
+            rays[3] = new Ray(transform.position, Vector3.right);
+            foreach (var ray in rays)
+            {
+                if(Physics.Raycast(ray, out hit, 1f,lm))
+                {
+                    if(Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) < 75)
+                    {
+                        //Use the cross product of the normal and the direction of the player to get wether to go left or right ?
+                        Debug.Log(Vector3.Cross(hit.normal * -1, RootGeometry.transform.forward));
+                        RootGeometry.transform.LookAt(transform.position + hit.normal*-1 + Vector3.up);
+                        _playerController.enabled = false;
+                        transform.position = hit.point + hit.normal;
+                        _playerController.enabled = true;
+                        StartWallRun();
+                    }
+                }
+            }
+        }
         else if (!_playerController.isGrounded)
         {
             StartFall();
+        }
+    }
+
+    private void StartWallRun()
+    {
+        _currentState = PlayerStates.WallRun;
+        _playerAnimator.Play("WallRun");
+        ClearHorizontalMotion();
+        _targetVelocityY = Mathf.Sqrt(WallRunHeight * -2f * Gravity);
+
+    }
+    private void WallRun()
+    {
+        StopWallRun();
+    }
+    private void StopWallRun()
+    {
+        if (!_inputBlock)
+        {
+            _targetVelocityY *= 0.5f;
+            StartFall();
+        }
+        else if (_inputRoll)
+        {
+
+            _moveDirection = RootGeometry.transform.forward * -1;
+            _moveDirection.y = 0;
+            RootGeometry.transform.LookAt(transform.position+_moveDirection);
+            StartRoll();
         }
     }
 
@@ -377,7 +442,7 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Roll;
         _playerAnimator.Play("Roll");
-        _inputJump = false;
+        _inputRoll = false;
     }
     private void Roll()
     {
@@ -387,7 +452,7 @@ public class BasicPlayerController : MonoBehaviour
             _targetVelocityXZ = RollSpeed;
         }
 
-        SetMotion(_targetVelocityXZ);
+        SetHorizontalMotion(_targetVelocityXZ);
 
         StopRoll();
     }
@@ -402,7 +467,7 @@ public class BasicPlayerController : MonoBehaviour
             }
             else if (!_playerController.isGrounded)
             {
-                SetMotion(JumpSpeed);
+                SetHorizontalMotion(JumpSpeed);
                 StartJump();
             }
         }
@@ -431,18 +496,18 @@ public class BasicPlayerController : MonoBehaviour
         _playerAnimator.Play("Attack");
         _playerAnimator.SetInteger("AttackLevel", 1);
         //CheckEnemy ? Default to where the camera points
-        ClearMotion();
+        ClearHorizontalMotion();
         if(_currentTarget != null)
         {
             Vector3 v = (_currentTarget.transform.position - transform.position);
             _moveDirection = v;
             if(Vector3.Distance(_currentTarget.transform.position, transform.position) <= DistanceFromTarget)
             {
-                ClearMotion();
+                ClearHorizontalMotion();
             }
             else
             {
-                SetMotion(60 / v.magnitude);
+                SetHorizontalMotion(60 / v.magnitude);
             }
         }
         else
@@ -451,13 +516,13 @@ public class BasicPlayerController : MonoBehaviour
         }
         _moveDirection.y = 0;
         _inputAttack = false;
-        RotateCharacter();
+        RootGeometry.transform.LookAt(_playerController.transform.position + _moveDirection);
     }
     private void Attack()
     {
         if(_currentTarget != null && Vector3.Distance(_currentTarget.transform.position,transform.position) <= DistanceFromTarget)
         {
-            ClearMotion();
+            ClearHorizontalMotion();
         }
         StopAttack();
     }
@@ -530,7 +595,7 @@ public class BasicPlayerController : MonoBehaviour
         }
 
         CameraRoot.rotation = RootGeometry.rotation;
-        ClearMotion();
+        ClearHorizontalMotion();
         transform.parent = _pushableObject.transform;
         _playerController.enabled = false;
     }
@@ -563,7 +628,7 @@ public class BasicPlayerController : MonoBehaviour
     }
     private void StopPush()
     {
-        if (!_inputJump)
+        if (!_inputRoll)
         {
             transform.parent = null;
             _playerController.enabled = true;
@@ -579,21 +644,16 @@ public class BasicPlayerController : MonoBehaviour
         _playerController.Move(_moveMotion * Time.deltaTime);
     }
 
-    void SetMotion(float speed)
+    void SetHorizontalMotion(float speed)
     {
         _moveMotion.x = _moveDirection.x * speed;
         _moveMotion.z = _moveDirection.z * speed;
     }
 
-    void ClearMotion()
+    void ClearHorizontalMotion()
     {
         _moveMotion.x = 0;
         _moveMotion.z = 0;
-    }
-
-    void RotateCharacter()
-    {
-        RootGeometry.transform.LookAt(_playerController.transform.position + _moveDirection);
     }
 
     private bool IsAnimatorPlaying()

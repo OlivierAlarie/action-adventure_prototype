@@ -4,22 +4,27 @@ using UnityEngine;
 
 public class BasicCameraController : MonoBehaviour
 {
-    [Header("Camera")]
-    public Camera MainCamera;
-    public Transform CameraRoot;
-    public float CameraSensitivityX = 360;
-    public float CameraSensitivityY = 360;
-    public float MaxDownwardAngle = 20;
-    public float MaxUpwardAngle = -60;
+    private Camera _cam;
+    private bool _switched;
+
     // Start is called before the first frame update
     void Start()
     {
-        
+        if(_cam == null)
+        {
+            _cam = GetComponent<Camera>();
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
         
+    }
+
+    public void SwitchWorld()
+    {
+        _cam.clearFlags = _switched ? CameraClearFlags.Skybox : CameraClearFlags.Color;
+        _switched = !_switched;
     }
 }

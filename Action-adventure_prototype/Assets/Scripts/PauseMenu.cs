@@ -6,41 +6,19 @@ using UnityEngine.SceneManagement;
 public class PauseMenu : MonoBehaviour
 {
     public static bool GameIsPaused = false;
-    public GameObject pauseMenuUI;
-    Scene _activeSceneName;
+    private GameObject _pauseMenuUI;
 
-    private void Awake() {
-        _activeSceneName = SceneManager.GetActiveScene();
-    }
-
-    private void Update() {
-        if (Input.GetButtonDown("Pause")) {
-            if (GameIsPaused) {
-                Resume();
-            } else {
-                Pause();
-            }
-        }
-        Debug.Log(_activeSceneName);
-    }
     public void Resume() {
         Cursor.lockState = CursorLockMode.Locked;
-        pauseMenuUI.SetActive(false);
+        _pauseMenuUI.SetActive(false);
         Time.timeScale = 1f;
         GameIsPaused = false;
     }
-    void Pause() {
+    public void Pause() {
         Cursor.lockState = CursorLockMode.Confined;
-        pauseMenuUI.SetActive(true);
+        _pauseMenuUI.SetActive(true);
         Time.timeScale = 0f;
         GameIsPaused = true;
     }
 
-    public void Reload() {
-        SceneManager.LoadScene(_activeSceneName.name);
-        Resume();
-    }
-    public void QuitGame() {
-        Application.Quit();
-    }
 }

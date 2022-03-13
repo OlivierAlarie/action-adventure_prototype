@@ -1,0 +1,65 @@
+{
+    "name": "GameMasterInput",
+    "maps": [
+        {
+            "name": "GameMasterControls",
+            "id": "f2636e1f-9d2a-491a-928b-18cfda52aa3e",
+            "actions": [
+                {
+                    "name": "SwitchWorld",
+                    "type": "Button",
+                    "id": "7d10aabf-9299-41ad-b2a5-a53a27ecc391",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Pause",
+                    "type": "Button",
+                    "id": "9d6098ff-6981-4131-af87-3883f9c1c58d",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "67002807-7dc7-45e0-91e9-abffc797d84d",
+                    "path": "<Keyboard>/q",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "SwitchWorld",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "17905441-7f83-456b-847d-a41a232d9a18",
+                    "path": "<Gamepad>/rightShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "SwitchWorld",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "ac750477-5d3c-4739-bba6-0581ad184c34",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Pause",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
