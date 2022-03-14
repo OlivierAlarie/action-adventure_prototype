@@ -53,6 +53,7 @@ public class BasicPlayerController : MonoBehaviour
     private float _targetVelocityY = 0f;
     private float _terminalVelocityY = -53f;
     private float _wallRunTimer = 0f;
+    private float _jumpHangTimer = 0f;
     private GameObject _currentTarget;
     private PushableObject _pushableObject;
 
@@ -302,14 +303,44 @@ public class BasicPlayerController : MonoBehaviour
         _playerAnimator.Play("Jump");
         _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
         _inputRoll = false;
+        _jumpHangTimer = -1f;
     }
     private void Jump()
     {
+        RaycastHit hit;
+        int lm = 1 << 6;
+        lm = ~lm;
+        Ray[] rays = new Ray[4];
+        rays[0] = new Ray(transform.position, Vector3.forward);
+        rays[1] = new Ray(transform.position, Vector3.back);
+        rays[2] = new Ray(transform.position, Vector3.left);
+        rays[3] = new Ray(transform.position, Vector3.right);
+        foreach (var ray in rays)
+        {
+            if (_jumpHangTimer == -1f && Physics.Raycast(ray, out hit, 1f, lm))
+            {
+                Debug.Log("Collided with Something");
+                ClearHorizontalMotion();
+                _playerController.enabled = false;
+                transform.position = hit.point + hit.normal;
+                _playerController.enabled = true;
+                _jumpHangTimer = 0.35f;
+                break;
+            }
+        }
+
+
+        if (_jumpHangTimer > 0)
+        {
+            _targetVelocityY = 0;
+            _jumpHangTimer -= Time.deltaTime;
+        }
+
         StopJump();
     }
     private void StopJump() 
     {
-        if(_targetVelocityY <= 0)
+        if(_targetVelocityY < 0)
         {
             if (!_playerController.isGrounded)
             {
@@ -319,6 +350,14 @@ public class BasicPlayerController : MonoBehaviour
             {
                 StartIdle();
             }
+
+        }
+        else if(_jumpHangTimer > 0 && _inputRoll)
+        {
+            _moveDirection = RootGeometry.transform.forward * -1;
+            _moveDirection.y = 0;
+            RootGeometry.transform.LookAt(transform.position + _moveDirection);
+            StartRoll();
         }
     }
 
@@ -426,6 +465,7 @@ public class BasicPlayerController : MonoBehaviour
                     _playerController.enabled = true;
 
                     StartWallRun();
+                    break;
                 }
             }
         }
@@ -493,7 +533,7 @@ public class BasicPlayerController : MonoBehaviour
                 _targetVelocityXZ = MaxSpeed;
                 StartRun();
             }
-            else if (!_playerController.isGrounded)
+            else if (!_playerController.isGrounded && !Physics.Raycast(transform.position,Vector3.down,2f))
             {
                 SetHorizontalMotion(JumpSpeed);
                 StartJump();
