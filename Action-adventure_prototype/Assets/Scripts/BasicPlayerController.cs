@@ -52,6 +52,7 @@ public class BasicPlayerController : MonoBehaviour
     [SerializeField] private float _targetVelocityXZ = 0f;
     private float _targetVelocityY = 0f;
     private float _terminalVelocityY = -53f;
+    private float _wallRunTimer = 0f;
     private GameObject _currentTarget;
     private PushableObject _pushableObject;
 
@@ -390,16 +391,41 @@ public class BasicPlayerController : MonoBehaviour
             {
                 if(Physics.Raycast(ray, out hit, 1f,lm))
                 {
-                    if(Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) < 75)
+
+                    if(Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) > 75) { break; }
+
+
+                    if (Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) < 35)
                     {
-                        //Use the cross product of the normal and the direction of the player to get wether to go left or right ?
-                        Debug.Log(Vector3.Cross(hit.normal * -1, RootGeometry.transform.forward));
-                        RootGeometry.transform.LookAt(transform.position + hit.normal*-1 + Vector3.up);
-                        _playerController.enabled = false;
-                        transform.position = hit.point + hit.normal;
-                        _playerController.enabled = true;
-                        StartWallRun();
+                        RootGeometry.transform.LookAt(transform.position + hit.normal * -1 + Vector3.up);
+                        ClearHorizontalMotion();
+                        _targetVelocityY = Mathf.Sqrt(WallRunHeight * -2f * Gravity);
                     }
+                    else if (Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) <= 75)
+                    {
+                        Vector3 v = Vector3.Cross(hit.normal * -1, RootGeometry.transform.forward);
+                        if(v.y < 0)
+                        {
+                            _moveDirection = (Quaternion.Euler(0f, 90f, 0f) * hit.normal);
+                            _moveDirection.y = 0;
+                            _moveDirection.Normalize();
+                        }
+                        else
+                        {
+                            _moveDirection = (Quaternion.Euler(0f, -90f, 0f) * hit.normal);
+                            _moveDirection.y = 0;
+                            _moveDirection.Normalize();
+                        }
+                        SetHorizontalMotion(JumpSpeed);
+                        _targetVelocityY = Mathf.Sqrt(WallRunHeight*0.75f * -2f * Gravity);
+                        RootGeometry.transform.LookAt(transform.position + hit.normal * -1 + Vector3.up);
+                    }
+
+                    _playerController.enabled = false;
+                    transform.position = hit.point + hit.normal;
+                    _playerController.enabled = true;
+
+                    StartWallRun();
                 }
             }
         }
@@ -413,28 +439,30 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.WallRun;
         _playerAnimator.Play("WallRun");
-        ClearHorizontalMotion();
-        _targetVelocityY = Mathf.Sqrt(WallRunHeight * -2f * Gravity);
-
+        _inputBlock = false;
+        _wallRunTimer = 0f;
     }
     private void WallRun()
     {
+        _wallRunTimer += Time.deltaTime;
         StopWallRun();
     }
     private void StopWallRun()
     {
-        if (!_inputBlock)
+        if (_wallRunTimer >= 1f || !Physics.Raycast(transform.position, RootGeometry.forward, 2.5f))
         {
-            _targetVelocityY *= 0.5f;
             StartFall();
         }
         else if (_inputRoll)
         {
-
             _moveDirection = RootGeometry.transform.forward * -1;
             _moveDirection.y = 0;
             RootGeometry.transform.LookAt(transform.position+_moveDirection);
             StartRoll();
+        }
+        else if (_playerController.isGrounded)
+        {
+            StartIdle();
         }
     }
 
