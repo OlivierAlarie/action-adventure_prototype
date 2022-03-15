@@ -565,26 +565,7 @@ public class BasicPlayerController : MonoBehaviour
         _playerAnimator.SetInteger("AttackLevel", 1);
         //CheckEnemy ? Default to where the camera points
         ClearHorizontalMotion();
-        if(_currentTarget != null)
-        {
-            Vector3 v = (_currentTarget.transform.position - transform.position);
-            _moveDirection = v;
-            if(Vector3.Distance(_currentTarget.transform.position, transform.position) <= DistanceFromTarget)
-            {
-                ClearHorizontalMotion();
-            }
-            else
-            {
-                SetHorizontalMotion(60 / v.magnitude);
-            }
-        }
-        else
-        {
-            _moveDirection = CameraRoot.rotation * Vector3.forward;
-        }
-        _moveDirection.y = 0;
-        _inputAttack = false;
-        RootGeometry.transform.LookAt(_playerController.transform.position + _moveDirection);
+        AttackDirection();
     }
     private void Attack()
     {
@@ -594,6 +575,14 @@ public class BasicPlayerController : MonoBehaviour
         }
         StopAttack();
     }
+    private void AttackDirection()
+    {
+        Vector3 movedirection = new Vector3(_inputMove.x, 0, _inputMove.y) == Vector3.zero ? Vector3.forward : new Vector3(_inputMove.x, 0, _inputMove.y);
+        _moveDirection = CameraRoot.rotation * movedirection;
+        _moveDirection.y = 0;
+        _inputAttack = false;
+        RootGeometry.transform.LookAt(_playerController.transform.position + _moveDirection);
+    }
     private void StopAttack()
     {
         if (IsAnimatorMatchingState("Attack"))
@@ -601,7 +590,7 @@ public class BasicPlayerController : MonoBehaviour
             if (_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0.65f && _inputAttack)
             {
                 _playerAnimator.Play("Attack2");
-                _inputAttack = false;
+                AttackDirection();
             }
 
         }
@@ -609,8 +598,16 @@ public class BasicPlayerController : MonoBehaviour
         {
             if (_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0.65f && _inputAttack)
             {
+                _playerAnimator.Play("Attack3");
+                AttackDirection();
+            }
+        }
+        else if (IsAnimatorMatchingState("Attack3"))
+        {
+            if (_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0.65f && _inputAttack)
+            {
                 _playerAnimator.Play("Attack");
-                _inputAttack = false;
+                AttackDirection();
             }
         }
 
