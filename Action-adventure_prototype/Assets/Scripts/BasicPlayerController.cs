@@ -317,15 +317,17 @@ public class BasicPlayerController : MonoBehaviour
         rays[3] = new Ray(transform.position, Vector3.right);
         foreach (var ray in rays)
         {
-            if (_jumpHangTimer == -1f && Physics.Raycast(ray, out hit, 1f, lm))
+            if (Physics.Raycast(ray, out hit, 1f, lm) && _jumpHangTimer == -1f)
             {
-                Debug.Log("Collided with Something");
-                ClearHorizontalMotion();
-                _playerController.enabled = false;
-                transform.position = hit.point + hit.normal;
-                _playerController.enabled = true;
-                _jumpHangTimer = 0.35f;
-                break;
+                if (Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) < 35)
+                {
+                    ClearHorizontalMotion();
+                    _playerController.enabled = false;
+                    transform.position = hit.point + hit.normal;
+                    _playerController.enabled = true;
+                    _jumpHangTimer = 0.35f;
+                    break;
+                }
             }
         }
 
@@ -436,7 +438,6 @@ public class BasicPlayerController : MonoBehaviour
 
                     if (Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) < 35)
                     {
-                        RootGeometry.transform.LookAt(transform.position + hit.normal * -1 + Vector3.up);
                         ClearHorizontalMotion();
                         _targetVelocityY = Mathf.Sqrt(WallRunHeight * -2f * Gravity);
                     }
@@ -457,9 +458,9 @@ public class BasicPlayerController : MonoBehaviour
                         }
                         SetHorizontalMotion(JumpSpeed);
                         _targetVelocityY = Mathf.Sqrt(WallRunHeight*0.75f * -2f * Gravity);
-                        RootGeometry.transform.LookAt(transform.position + hit.normal * -1 + Vector3.up);
                     }
 
+                    RootGeometry.transform.LookAt(transform.position + -hit.normal);
                     _playerController.enabled = false;
                     transform.position = hit.point + hit.normal;
                     _playerController.enabled = true;
@@ -491,6 +492,7 @@ public class BasicPlayerController : MonoBehaviour
     {
         if (_wallRunTimer >= 1f || !Physics.Raycast(transform.position, RootGeometry.forward, 2.5f))
         {
+            _targetVelocityY *= 0.5f;
             StartFall();
         }
         else if (_inputRoll)
