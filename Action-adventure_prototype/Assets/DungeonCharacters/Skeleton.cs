@@ -23,7 +23,8 @@ public class Skeleton: MonoBehaviour
     public bool FollowingEnemy = false;
     private bool _toA = true;
     private bool _toB = false;
-    private float _hurtTimer = 1f;
+    private float _hurtTimer;
+    private Vector3 _lastHurtDirection;
     private enum AiState
     {
         Wandering,
@@ -113,14 +114,17 @@ public class Skeleton: MonoBehaviour
         else if(_currentState == AiState.Hurting)
         {
             _hurtTimer -= Time.deltaTime;
-
-            _animator.Play("Idle");
+            _agent.isStopped = true;
+            _animator.Play("Idle");//Change to Hurt, Find HurtAnimation
+            GetComponent<CharacterController>().Move(_lastHurtDirection * 10 * Time.deltaTime);
             if (_hurtTimer < 0f)
             {
-                _currentState = AiState.Attacking;
-                _hurtTimer = 1f;
+                _currentState = AiState.Wandering;//Change to idle ?
+                _agent.isStopped = false;
             }
-            Arena.OnEnemyDestroyed(this);
+
+            
+            //Arena.OnEnemyDestroyed(this);// Need to Implement Death State
         }
 
    
@@ -144,7 +148,11 @@ public class Skeleton: MonoBehaviour
     {
         if(other.tag == "PlayerWeapon")
         {
+            _lastHurtDirection = transform.position - other.GetComponentInParent<BasicPlayerController>().transform.position;
+            _lastHurtDirection.y = 0;
+            _lastHurtDirection.Normalize();
             _currentState = AiState.Hurting;
+            _hurtTimer = 0.25f;
         }
     }
 
