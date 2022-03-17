@@ -57,8 +57,7 @@ public class Skeleton: MonoBehaviour
 
         if (_currentState == AiState.Wandering)
         {
-            _animator.SetBool("walking", true);
-            _animator.SetBool("attacking", false);
+            _animator.Play("Walk");
             if (_agent.remainingDistance <= _range && _toA == true && _toB == false)
             {
                 SetDestination(_pointTocome.position);
@@ -83,8 +82,7 @@ public class Skeleton: MonoBehaviour
 
         else if (_currentState == AiState.Following)
         {
-            _animator.SetBool("walking", true);
-            _animator.SetBool("attacking", false);
+            _animator.Play("Walk");
             FollowingEnemy = true;
             if(Arena.Player != null) { SetDestination(Arena.Player.transform.position); }
             _toA = false;
@@ -104,23 +102,25 @@ public class Skeleton: MonoBehaviour
         }
         else if(_currentState == AiState.Attacking)
         {
-            _animator.SetBool("walking", false);
-            _animator.SetBool("attacking", true);
+            _animator.Play("Attack");
             _agent.stoppingDistance = _attackDistance;
-            if (distToPlayer > _attackDistance)
+            if (distToPlayer > _attackDistance && _animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1)
             {
                 _currentState = AiState.Following;
             }
+            if (Arena.Player != null) { FaceTarget(Arena.Player.transform.position); }
         }
         else if(_currentState == AiState.Hurting)
         {
             _hurtTimer -= Time.deltaTime;
 
-            if(_hurtTimer < 0f)
+            _animator.Play("Idle");
+            if (_hurtTimer < 0f)
             {
                 _currentState = AiState.Attacking;
                 _hurtTimer = 1f;
             }
+            Arena.OnEnemyDestroyed(this);
         }
 
    

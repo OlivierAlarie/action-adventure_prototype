@@ -566,8 +566,6 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Attack;
         _playerAnimator.Play("Attack");
-        _playerAnimator.SetInteger("AttackLevel", 1);
-        //CheckEnemy ? Default to where the camera points
         ClearHorizontalMotion();
         AttackDirection();
     }
@@ -751,7 +749,7 @@ public class BasicPlayerController : MonoBehaviour
         {
             if(_currentState != PlayerStates.Hurt)
             {
-                _lastHurtDirection = transform.position - other.transform.position;
+                _lastHurtDirection = transform.position - other.GetComponentInParent<Skeleton>().transform.position;
                 _lastHurtDirection.y = 0;
                 _lastHurtDirection.Normalize();
                 StartHurt();

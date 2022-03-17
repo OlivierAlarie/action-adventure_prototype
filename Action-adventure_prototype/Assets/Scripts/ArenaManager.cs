@@ -5,20 +5,26 @@ using UnityEngine;
 public class ArenaManager : MonoBehaviour
 {
     private List<Skeleton> _enemies = new List<Skeleton>();
+    private List<Gate> _gates = new List<Gate>();
     public Transform Player;
     // Start is called before the first frame update
     void Awake()
     {
         Skeleton[] enemiesAtStart = GetComponentsInChildren<Skeleton>(true);
-        Debug.Log(enemiesAtStart.Length);
         foreach (var enemy in enemiesAtStart)
         {
             enemy.Arena = this;
             _enemies.Add(enemy);
         }
+
+        Gate[] gatesAtStart = GetComponentsInChildren<Gate>(true);
+        foreach (var gate in gatesAtStart)
+        {
+            _gates.Add(gate);
+        }
     }
 
-    void OnEnemyDestroyed(Skeleton enemy)
+    public void OnEnemyDestroyed(Skeleton enemy)
     {
         //remove enemy from list, until it reaches 0
         _enemies.Remove(enemy);
@@ -28,10 +34,13 @@ public class ArenaManager : MonoBehaviour
         }
     }
 
-    void OnArenaWon()
+    private void OnArenaWon()
     {
-        
-        //PlayAnimation to unlock Path ?
+
+        foreach (var gate in _gates)
+        {
+            gate.IsOpen = true;
+        }
     }
 
     private void OnTriggerEnter(Collider other)
