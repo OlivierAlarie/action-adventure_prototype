@@ -16,16 +16,20 @@ public class Skeleton: MonoBehaviour
     [SerializeField]
     private float _boundry = 5f;
     private AiState _currentState;
-    public Transform Player;
+    public ArenaManager Arena;
     public Transform _pointTogo;
     public Transform _pointTocome;
+    [SerializeField]private float _attackDistance = 3f;
     public bool FollowingEnemy = false;
     private bool _toA = true;
     private bool _toB = false;
+    private float _hurtTimer = 1f;
     private enum AiState
     {
         Wandering,
-        Following
+        Following,
+        Attacking,
+        Hurting
     }
     void Start()
     {  
@@ -40,12 +44,21 @@ public class Skeleton: MonoBehaviour
 
     void Update()
     {
+        float distToPlayer;
+        if (Arena != null && Arena.Player != null) 
+        {
+            distToPlayer = Vector3.Distance(transform.position, Arena.Player.transform.position);
+        }
+        else
+        {
+            distToPlayer = float.PositiveInfinity;
+        }
+        
+
         if (_currentState == AiState.Wandering)
         {
             _animator.SetBool("walking", true);
             _animator.SetBool("attacking", false);
-
-
             if (_agent.remainingDistance <= _range && _toA == true && _toB == false)
             {
                 SetDestination(_pointTocome.position);
@@ -60,7 +73,7 @@ public class Skeleton: MonoBehaviour
                 _toB = false;
             }
            
-            else if (Vector3.Distance(transform.position, Player.transform.position) < _boundry)
+            else if (distToPlayer < _boundry)
             {
                 _currentState = AiState.Following;
                 _toA = false;
@@ -70,18 +83,43 @@ public class Skeleton: MonoBehaviour
 
         else if (_currentState == AiState.Following)
         {
+            _animator.SetBool("walking", true);
+            _animator.SetBool("attacking", false);
             FollowingEnemy = true;
-            _animator.SetBool("attacking", true);
-            _animator.SetBool("walking", false);
-            SetDestination(Player.transform.position);
+            if(Arena.Player != null) { SetDestination(Arena.Player.transform.position); }
             _toA = false;
             _toB = false;
-            if (Vector3.Distance(transform.position, Player.transform.position) >= _boundry)
+            
+            if (distToPlayer <= _attackDistance)
+            {
+                _currentState = AiState.Attacking;
+            }
+            if (distToPlayer >= _boundry)
             {
                 _currentState = AiState.Wandering;
                 FollowingEnemy = false;
                 _toA = true;
                 _toB = false;
+            }
+        }
+        else if(_currentState == AiState.Attacking)
+        {
+            _animator.SetBool("walking", false);
+            _animator.SetBool("attacking", true);
+            _agent.stoppingDistance = _attackDistance;
+            if (distToPlayer > _attackDistance)
+            {
+                _currentState = AiState.Following;
+            }
+        }
+        else if(_currentState == AiState.Hurting)
+        {
+            _hurtTimer -= Time.deltaTime;
+
+            if(_hurtTimer < 0f)
+            {
+                _currentState = AiState.Attacking;
+                _hurtTimer = 1f;
             }
         }
 
@@ -91,6 +129,7 @@ public class Skeleton: MonoBehaviour
     void SetDestination(Vector3 point)
     {
         _agent.SetDestination(point);
+        _agent.stoppingDistance = 0;
         FaceTarget(point);
     }
 
@@ -99,6 +138,14 @@ public class Skeleton: MonoBehaviour
         Vector3 direction = (target - transform.position).normalized;
         Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if(other.tag == "PlayerWeapon")
+        {
+            _currentState = AiState.Hurting;
+        }
     }
 
 }

@@ -54,8 +54,10 @@ public class BasicPlayerController : MonoBehaviour
     private float _terminalVelocityY = -53f;
     private float _wallRunTimer = 0f;
     private float _jumpHangTimer = 0f;
+    private float _hurtTimer = 0f;
     private GameObject _currentTarget;
     private PushableObject _pushableObject;
+    private Vector3 _lastHurtDirection;
 
     private PlayerStates _currentState;
 
@@ -342,7 +344,7 @@ public class BasicPlayerController : MonoBehaviour
     }
     private void StopJump() 
     {
-        if(_targetVelocityY < 0)
+        if(_targetVelocityY < 0 && _jumpHangTimer <= 0)
         {
             if (!_playerController.isGrounded)
             {
@@ -624,14 +626,21 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Hurt;
         _playerAnimator.Play("Hurt");
+        _hurtTimer = 0f;
+        _moveDirection = _lastHurtDirection;
+        ClearHorizontalMotion();
     }
     private void Hurt()
     {
-
+        _hurtTimer += Time.deltaTime;
+        StopHurt();
     }
     private void StopHurt()
     {
-
+        if(_hurtTimer >= 0.5f)
+        {
+            StartIdle();
+        }
     }
     
     private void StartPush()
@@ -737,6 +746,16 @@ public class BasicPlayerController : MonoBehaviour
         if (other.tag == "PushableObject")
         {
             _pushableObject = other.gameObject.GetComponent<PushableObject>();
+        }
+        else if(other.tag == "EnemyWeapon")
+        {
+            if(_currentState != PlayerStates.Hurt)
+            {
+                _lastHurtDirection = transform.position - other.transform.position;
+                _lastHurtDirection.y = 0;
+                _lastHurtDirection.Normalize();
+                StartHurt();
+            }
         }
     }
 
