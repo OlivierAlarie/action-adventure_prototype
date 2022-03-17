@@ -9,7 +9,7 @@ public class Gate : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        _targetHeight = new Vector3(transform.position.x, transform.position.y - transform.localScale.y , transform.position.z);
+        _targetHeight = new Vector3(transform.position.x, transform.position.y - 5f , transform.position.z);
     }
 
     // Update is called once per frame

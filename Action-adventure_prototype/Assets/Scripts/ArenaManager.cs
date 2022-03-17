@@ -36,7 +36,6 @@ public class ArenaManager : MonoBehaviour
 
     private void OnArenaWon()
     {
-
         foreach (var gate in _gates)
         {
             gate.IsOpen = true;

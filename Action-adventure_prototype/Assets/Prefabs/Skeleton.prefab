@@ -909,7 +909,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6220619687514988141}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 50.45, y: 0.78, z: -39.44}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -933,6 +933,7 @@ MonoBehaviour:
   _animator: {fileID: 622888782950861873}
   _range: 5
   _boundry: 10
+  _health: 6
   Arena: {fileID: 0}
   _pointTogo: {fileID: 0}
   _pointTocome: {fileID: 0}

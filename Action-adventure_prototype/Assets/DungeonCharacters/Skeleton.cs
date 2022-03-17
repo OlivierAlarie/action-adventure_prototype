@@ -15,22 +15,31 @@ public class Skeleton: MonoBehaviour
     // boundry: checking if player is in the boundry
     [SerializeField]
     private float _boundry = 5f;
+    [SerializeField]
+    private int _health = 5;
+    [SerializeField]
+    private Transform _pointTogo;
+    private Vector3 _pointTocome;
     private AiState _currentState;
     public ArenaManager Arena;
-    public Transform _pointTogo;
-    public Transform _pointTocome;
+
+    
     [SerializeField]private float _attackDistance = 3f;
     public bool FollowingEnemy = false;
     private bool _toA = true;
     private bool _toB = false;
     private float _hurtTimer;
     private Vector3 _lastHurtDirection;
+    private CharacterController _controller;
+
     private enum AiState
     {
+        Idleing,
         Wandering,
         Following,
         Attacking,
-        Hurting
+        Hurting,
+        Dying
     }
     void Start()
     {  
@@ -38,9 +47,10 @@ public class Skeleton: MonoBehaviour
         {
             _agent = GetComponent<NavMeshAgent>();
         }
-        _currentState = AiState.Wandering;
-        SetDestination(_pointTogo.transform.position);
-
+        _currentState = AiState.Idleing;
+        _pointTocome = transform.position;
+        SetDestination(_pointTogo.position);
+        _controller = GetComponent<CharacterController>();
     }
 
     void Update()
@@ -55,20 +65,35 @@ public class Skeleton: MonoBehaviour
             distToPlayer = float.PositiveInfinity;
         }
         
-
-        if (_currentState == AiState.Wandering)
+        if (_currentState == AiState.Idleing)
+        {
+            _animator.Play("Idle");
+            _agent.isStopped = true;
+            if (_animator.GetCurrentAnimatorStateInfo(0).IsName("Idle") && _animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1)
+            {
+                _agent.isStopped = false;
+                _currentState = AiState.Wandering;
+            }
+            if (distToPlayer < _boundry)
+            {
+                _agent.isStopped = false;
+                _currentState = AiState.Following;
+            }
+        }
+        else if (_currentState == AiState.Wandering)
         {
             _animator.Play("Walk");
             if (_agent.remainingDistance <= _range && _toA == true && _toB == false)
             {
-                SetDestination(_pointTocome.position);
+                _currentState = AiState.Idleing;
+                SetDestination(_pointTocome);
                 _toA = false;
                 _toB = true;
             }
             else if (_agent.remainingDistance <= _range && _toA == false && _toB == true)
             {
-                
-                SetDestination(_pointTogo.transform.position);
+                _currentState = AiState.Idleing;
+                SetDestination(_pointTogo.position);
                 _toA = true;
                 _toB = false;
             }
@@ -115,16 +140,21 @@ public class Skeleton: MonoBehaviour
         {
             _hurtTimer -= Time.deltaTime;
             _agent.isStopped = true;
-            _animator.Play("Idle");//Change to Hurt, Find HurtAnimation
-            GetComponent<CharacterController>().Move(_lastHurtDirection * 10 * Time.deltaTime);
+            _animator.Play("Hurt");//Change to Hurt, Find HurtAnimation
+            _controller.Move(_lastHurtDirection * 10 * Time.deltaTime);
             if (_hurtTimer < 0f)
             {
-                _currentState = AiState.Wandering;//Change to idle ?
+                _currentState = AiState.Wandering;
                 _agent.isStopped = false;
             }
+        }
+        else if (_currentState == AiState.Dying)
+        {
+            _animator.Play("Death");
+            _agent.isStopped = true;
+            _controller.enabled = false;
 
-            
-            //Arena.OnEnemyDestroyed(this);// Need to Implement Death State
+            Arena.OnEnemyDestroyed(this);
         }
 
    
@@ -151,8 +181,18 @@ public class Skeleton: MonoBehaviour
             _lastHurtDirection = transform.position - other.GetComponentInParent<BasicPlayerController>().transform.position;
             _lastHurtDirection.y = 0;
             _lastHurtDirection.Normalize();
-            _currentState = AiState.Hurting;
-            _hurtTimer = 0.25f;
+
+            _health--;
+            if(_health <= 0)
+            {
+                _currentState = AiState.Dying;
+            }
+            else
+            {
+                _currentState = AiState.Hurting;
+                _hurtTimer = 0.25f;
+            }
+            
         }
     }
 
