@@ -43,7 +43,6 @@ public class PushableObject : MonoBehaviour
             Gizmos.DrawRay(transform.position, _lastDirection*2);
             Gizmos.color = Color.white;
             Gizmos.DrawWireCube(transform.position + _lastDirection * 2, transform.localScale * 0.97f);
-            Debug.Log(_hit.collider.gameObject.name);
             Gizmos.color = Color.red;
             Gizmos.DrawRay(transform.position, _hit.point - transform.position);
         }

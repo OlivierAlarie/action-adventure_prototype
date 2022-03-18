@@ -21,6 +21,7 @@ public class ArenaManager : MonoBehaviour
         foreach (var gate in gatesAtStart)
         {
             _gates.Add(gate);
+            gate.IsOpen = true;
         }
     }
 
@@ -42,19 +43,29 @@ public class ArenaManager : MonoBehaviour
         }
     }
 
+    private void OnArenaStart()
+    {
+        foreach (var gate in _gates)
+        {
+            gate.IsOpen = false;
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if(other.tag == "Player")
         {
             Player = other.transform;
+            OnArenaStart();
         }
     }
 
+    /*
     private void OnTriggerExit(Collider other)
     {
         if(other.tag == "Player")
         {
             Player = null;
         }
-    }
+    }*/
 }

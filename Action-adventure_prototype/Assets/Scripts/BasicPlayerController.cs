@@ -295,7 +295,17 @@ public class BasicPlayerController : MonoBehaviour
     {
         if (!_playerController.isGrounded) { StartFall(); }
         else if (_inputMove.x != 0 || _inputMove.y != 0) { StartRun(); }
-        else if (_inputRoll) { StartJump(); }
+        else if (_inputRoll) {
+            RaycastHit[] hits = Physics.RaycastAll(transform.position, RootGeometry.transform.forward, 0.6f);
+            foreach (var hit in hits)
+            {
+                if (hit.collider.isTrigger && hits[0].collider.tag == "PushableObject")
+                {
+                    _pushableObject = hit.collider.GetComponent<PushableObject>();
+                    StartPush();
+                }
+            }
+        }
         else if (_inputAttack) { StartAttack(); }
     }
 
@@ -407,11 +417,17 @@ public class BasicPlayerController : MonoBehaviour
         }
         else if (_inputRoll)
         {
-            if(_pushableObject != null)
+            RaycastHit[] hits = Physics.RaycastAll(transform.position, RootGeometry.transform.forward, 0.6f);
+            foreach (var hit in hits)
             {
-                StartPush();
+                if (hit.collider.isTrigger && hit.collider.tag == "PushableObject")
+                {
+                    _pushableObject = hit.collider.GetComponent<PushableObject>();
+                    StartPush();
+                }
             }
-            else
+            
+            if(_pushableObject == null)
             {
                 StartRoll();
             }
@@ -707,6 +723,7 @@ public class BasicPlayerController : MonoBehaviour
             transform.parent = null;
             _playerController.enabled = true;
             _cameraLocked = false;
+            _pushableObject = null;
             StartIdle();
         }
     }
@@ -741,11 +758,7 @@ public class BasicPlayerController : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.tag == "PushableObject")
-        {
-            _pushableObject = other.gameObject.GetComponent<PushableObject>();
-        }
-        else if(other.tag == "EnemyWeapon")
+        if(other.tag == "EnemyWeapon")
         {
             if(_currentState != PlayerStates.Hurt)
             {
@@ -754,14 +767,6 @@ public class BasicPlayerController : MonoBehaviour
                 _lastHurtDirection.Normalize();
                 StartHurt();
             }
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.tag == "PushableObject")
-        {
-            _pushableObject = null;
         }
     }
 }
