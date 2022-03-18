@@ -531,16 +531,19 @@ public class BasicPlayerController : MonoBehaviour
         _currentState = PlayerStates.Roll;
         _playerAnimator.Play("Roll");
         _inputRoll = false;
+        _targetVelocityXZ = RollSpeed;
+        SetHorizontalMotion(_targetVelocityXZ);
     }
     private void Roll()
     {
+        /*
         _targetVelocityXZ = Mathf.Lerp(_targetVelocityXZ, RollSpeed, Time.deltaTime * 25);
         if (_targetVelocityXZ > RollSpeed - 0.1f)
         {
             _targetVelocityXZ = RollSpeed;
         }
 
-        SetHorizontalMotion(_targetVelocityXZ);
+        SetHorizontalMotion(_targetVelocityXZ);*/
 
         StopRoll();
     }
@@ -735,13 +738,13 @@ public class BasicPlayerController : MonoBehaviour
         _playerController.Move(_moveMotion * Time.deltaTime);
     }
 
-    void SetHorizontalMotion(float speed)
+    public void SetHorizontalMotion(float speed)
     {
         _moveMotion.x = _moveDirection.x * speed;
         _moveMotion.z = _moveDirection.z * speed;
     }
 
-    void ClearHorizontalMotion()
+    public void ClearHorizontalMotion()
     {
         _moveMotion.x = 0;
         _moveMotion.z = 0;

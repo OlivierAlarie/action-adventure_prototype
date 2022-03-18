@@ -2341,42 +2341,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2847756255449887557, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: m_BackGroundColor.b
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2847756255449887557, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: m_BackGroundColor.g
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2847756255449887557, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: m_BackGroundColor.r
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3287105237299195906, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3287105237299195906, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3287105237299195906, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3287105237299195906, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3287105237299195906, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3287105237423869776, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
-      propertyPath: MaxDistanceTargetLock
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 3287105237423869777, guid: c423e9fba48c57e43b7806e6eb3a69d8, type: 3}
       propertyPath: m_RootOrder
       value: 2
