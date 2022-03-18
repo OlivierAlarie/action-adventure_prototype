@@ -679,22 +679,22 @@ public class BasicPlayerController : MonoBehaviour
         if(newDirection.z > 0)
         {
             //Push Forward 
-            _pushableObject.Push(RootGeometry.forward);
+            _pushableObject.Push(RootGeometry.forward, 2f);
         }
         else if(newDirection.z < 0)
         {
             //Push Backward
-            _pushableObject.Push(RootGeometry.forward*-1);
+            _pushableObject.Push(RootGeometry.forward*-1, 4f);
         }
         else if(newDirection.x < 0 && CanPushSideways)
         {
             //Push Left
-            _pushableObject.Push(RootGeometry.right*-1);
+            _pushableObject.Push(RootGeometry.right*-1, 2f);
         }
         else if(newDirection.x > 0 && CanPushSideways)
         {
             //Push Right
-            _pushableObject.Push(RootGeometry.right);
+            _pushableObject.Push(RootGeometry.right, 2f);
         }
 
 

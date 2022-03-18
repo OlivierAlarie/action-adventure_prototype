@@ -50,10 +50,10 @@ public class PushableObject : MonoBehaviour
         
     }
 
-    private bool CheckDirection(Vector3 direction)
+    private bool CheckDirection(Vector3 direction, float distance)
     {
         
-        _wouldCollide = Physics.BoxCast(transform.position, transform.localScale / 2.05f , direction, out _hit, Quaternion.identity, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        _wouldCollide = Physics.BoxCast(transform.position, transform.localScale / 2.05f , direction, out _hit, Quaternion.identity, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
         if (_wouldCollide)
         {
             _lastDirection = direction;
@@ -65,11 +65,11 @@ public class PushableObject : MonoBehaviour
         }
     }
 
-    public void Push(Vector3 direction)
+    public void Push(Vector3 direction, float distance)
     {
         if (!_beingPushed)
         {
-            if (CheckDirection(direction))
+            if (CheckDirection(direction, distance))
             {
                 _destination = transform.position + (direction*2);
                 _beingPushed = true;
