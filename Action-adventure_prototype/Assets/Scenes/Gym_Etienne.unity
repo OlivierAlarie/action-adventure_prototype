@@ -1246,7 +1246,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3297944552771510632, guid: a9fa54d0bf298b64fa7d2c2412b92eea, type: 3}
       propertyPath: m_Name
-      value: PushableObject (1)
+      value: PushableObjectV
       objectReference: {fileID: 0}
     - target: {fileID: 3297944552771510632, guid: a9fa54d0bf298b64fa7d2c2412b92eea, type: 3}
       propertyPath: m_Layer

@@ -7,6 +7,9 @@ public class PushableObject : MonoBehaviour
     [SerializeField] private float _speed;
     private Vector3 _destination;
     private bool _beingPushed;
+    private bool _wouldCollide;
+    private RaycastHit _hit;
+    private Vector3 _lastDirection;
     
 
     // Start is called before the first frame update
@@ -34,22 +37,22 @@ public class PushableObject : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        
-    }
-
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.tag == "Player")
+        if (_wouldCollide)
         {
-
+            Gizmos.DrawRay(transform.position, _lastDirection*2);
+            Gizmos.DrawWireCube(transform.position + _lastDirection * 2, transform.localScale);
+            Debug.Log(_hit.collider.gameObject.name);
         }
+        
     }
 
     private bool CheckDirection(Vector3 direction)
     {
-        if (Physics.BoxCast(transform.position, transform.localScale / 2, direction, Quaternion.identity,2f))
+        
+        _wouldCollide = Physics.BoxCast(transform.position, transform.localScale / 2.01f , direction, out _hit, Quaternion.identity, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        if (_wouldCollide)
         {
+            _lastDirection = direction;
             return false;
         }
         else
