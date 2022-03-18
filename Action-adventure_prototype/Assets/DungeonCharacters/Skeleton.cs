@@ -154,7 +154,10 @@ public class Skeleton: MonoBehaviour
             _agent.isStopped = true;
             _controller.enabled = false;
 
-            Arena.OnEnemyDestroyed(this);
+            if(Arena != null)
+            {
+                Arena.OnEnemyDestroyed(this);
+            }
         }
 
    
