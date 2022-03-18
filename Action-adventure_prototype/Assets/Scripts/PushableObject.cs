@@ -39,9 +39,13 @@ public class PushableObject : MonoBehaviour
     {
         if (_wouldCollide)
         {
+            Gizmos.color = Color.green;
             Gizmos.DrawRay(transform.position, _lastDirection*2);
-            Gizmos.DrawWireCube(transform.position + _lastDirection * 2, transform.localScale);
+            Gizmos.color = Color.white;
+            Gizmos.DrawWireCube(transform.position + _lastDirection * 2, transform.localScale * 0.97f);
             Debug.Log(_hit.collider.gameObject.name);
+            Gizmos.color = Color.red;
+            Gizmos.DrawRay(transform.position, _hit.point - transform.position);
         }
         
     }
@@ -49,7 +53,7 @@ public class PushableObject : MonoBehaviour
     private bool CheckDirection(Vector3 direction)
     {
         
-        _wouldCollide = Physics.BoxCast(transform.position, transform.localScale / 2.01f , direction, out _hit, Quaternion.identity, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        _wouldCollide = Physics.BoxCast(transform.position, transform.localScale / 2.05f , direction, out _hit, Quaternion.identity, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
         if (_wouldCollide)
         {
             _lastDirection = direction;
