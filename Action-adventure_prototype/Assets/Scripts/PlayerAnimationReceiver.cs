@@ -21,4 +21,9 @@ public class PlayerAnimationReceiver : MonoBehaviour
     {
         _player.ClearHorizontalMotion();
     }
+
+    void SetHorizontalMotion(float speed)
+    {
+        _player.SetHorizontalMotion(speed);
+    }
 }

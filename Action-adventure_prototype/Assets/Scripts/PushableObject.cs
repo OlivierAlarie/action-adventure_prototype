@@ -6,7 +6,7 @@ public class PushableObject : MonoBehaviour
 {
     [SerializeField] private float _speed;
     private Vector3 _destination;
-    private bool _beingPushed;
+    public bool BeingPushed;
     private bool _wouldCollide;
     private RaycastHit _hit;
     private Vector3 _lastDirection;
@@ -21,12 +21,12 @@ public class PushableObject : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (_beingPushed)
+        if (BeingPushed)
         {
             if(Vector3.Distance(transform.position, _destination) < Mathf.Epsilon)
             {
                 transform.position = _destination;
-                _beingPushed = false;
+                BeingPushed = false;
             }
             else
             {
@@ -66,12 +66,12 @@ public class PushableObject : MonoBehaviour
 
     public void Push(Vector3 direction, float distance)
     {
-        if (!_beingPushed)
+        if (!BeingPushed)
         {
             if (CheckDirection(direction, distance))
             {
                 _destination = transform.position + (direction*2);
-                _beingPushed = true;
+                BeingPushed = true;
             }
         }
     }
