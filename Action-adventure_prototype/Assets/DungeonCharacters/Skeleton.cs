@@ -29,6 +29,7 @@ public class Skeleton: MonoBehaviour
     private bool _toA = true;
     private bool _toB = false;
     private float _hurtTimer;
+    private float _totalHurtDuration = 1f;
     private Vector3 _lastHurtDirection;
     private CharacterController _controller;
 
@@ -141,7 +142,10 @@ public class Skeleton: MonoBehaviour
             _hurtTimer -= Time.deltaTime;
             _agent.isStopped = true;
             _animator.Play("Hurt");//Change to Hurt, Find HurtAnimation
-            _controller.Move(_lastHurtDirection * 10 * Time.deltaTime);
+            if(_hurtTimer > _totalHurtDuration - 0.25f)
+            {
+                _controller.Move(_lastHurtDirection * 10 * Time.deltaTime);
+            }
             if (_hurtTimer < 0f)
             {
                 _currentState = AiState.Wandering;
@@ -193,7 +197,7 @@ public class Skeleton: MonoBehaviour
             else
             {
                 _currentState = AiState.Hurting;
-                _hurtTimer = 0.25f;
+                _hurtTimer = _totalHurtDuration;
             }
             
         }

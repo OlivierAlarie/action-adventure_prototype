@@ -537,8 +537,6 @@ public class BasicPlayerController : MonoBehaviour
         _currentState = PlayerStates.Roll;
         _playerAnimator.Play("Roll");
         _inputRoll = false;
-        _targetVelocityXZ = RollSpeed;
-        SetHorizontalMotion(_targetVelocityXZ);
     }
     private void Roll()
     {
@@ -550,7 +548,6 @@ public class BasicPlayerController : MonoBehaviour
         {
             if (!IsAnimatorPlaying())
             {
-                _targetVelocityXZ = MaxSpeed;
                 StartRun();
             }
             else if (!_playerController.isGrounded && !Physics.Raycast(transform.position, Vector3.down, 2f))
