@@ -6,7 +6,10 @@ public class PushableObject : MonoBehaviour
 {
     [SerializeField] private float _speed;
     private Vector3 _destination;
-    private bool _beingPushed;
+    public bool BeingPushed;
+    private bool _wouldCollide;
+    private RaycastHit _hit;
+    private Vector3 _lastDirection;
     
 
     // Start is called before the first frame update
@@ -18,12 +21,12 @@ public class PushableObject : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (_beingPushed)
+        if (BeingPushed)
         {
             if(Vector3.Distance(transform.position, _destination) < Mathf.Epsilon)
             {
                 transform.position = _destination;
-                _beingPushed = false;
+                BeingPushed = false;
             }
             else
             {
@@ -34,22 +37,25 @@ public class PushableObject : MonoBehaviour
 
     private void OnDrawGizmos()
     {
+        if (_wouldCollide)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawRay(transform.position, _lastDirection*2);
+            Gizmos.color = Color.white;
+            Gizmos.DrawWireCube(transform.position + _lastDirection * 2, transform.localScale * 0.97f);
+            Gizmos.color = Color.red;
+            Gizmos.DrawRay(transform.position, _hit.point - transform.position);
+        }
         
     }
 
-
-    private void OnTriggerEnter(Collider other)
+    private bool CheckDirection(Vector3 direction, float distance)
     {
-        if (other.tag == "Player")
+        
+        _wouldCollide = Physics.BoxCast(transform.position, transform.localScale / 2.05f , direction, out _hit, Quaternion.identity, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        if (_wouldCollide)
         {
-
-        }
-    }
-
-    private bool CheckDirection(Vector3 direction)
-    {
-        if (Physics.BoxCast(transform.position, transform.localScale / 2, direction, Quaternion.identity,2f))
-        {
+            _lastDirection = direction;
             return false;
         }
         else
@@ -58,14 +64,14 @@ public class PushableObject : MonoBehaviour
         }
     }
 
-    public void Push(Vector3 direction)
+    public void Push(Vector3 direction, float distance)
     {
-        if (!_beingPushed)
+        if (!BeingPushed)
         {
-            if (CheckDirection(direction))
+            if (CheckDirection(direction, distance))
             {
                 _destination = transform.position + (direction*2);
-                _beingPushed = true;
+                BeingPushed = true;
             }
         }
     }

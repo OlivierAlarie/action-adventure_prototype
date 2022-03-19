@@ -52,8 +52,13 @@ public class BasicPlayerController : MonoBehaviour
     [SerializeField] private float _targetVelocityXZ = 0f;
     private float _targetVelocityY = 0f;
     private float _terminalVelocityY = -53f;
+    private float _wallRunTimer = 0f;
+    private string _wallRunAnimation;
+    private float _jumpHangTimer = 0f;
+    private float _hurtTimer = 0f;
     private GameObject _currentTarget;
     private PushableObject _pushableObject;
+    private Vector3 _lastHurtDirection;
 
     private PlayerStates _currentState;
 
@@ -239,7 +244,7 @@ public class BasicPlayerController : MonoBehaviour
         }
         else
         {
-            _targetVelocityY = -1f;
+            _targetVelocityY = -10f;
         }
     }
 
@@ -291,7 +296,17 @@ public class BasicPlayerController : MonoBehaviour
     {
         if (!_playerController.isGrounded) { StartFall(); }
         else if (_inputMove.x != 0 || _inputMove.y != 0) { StartRun(); }
-        else if (_inputRoll) { StartJump(); }
+        else if (_inputRoll) {
+            RaycastHit[] hits = Physics.RaycastAll(transform.position, RootGeometry.transform.forward, 0.6f);
+            foreach (var hit in hits)
+            {
+                if (hit.collider.isTrigger && hits[0].collider.tag == "PushableObject")
+                {
+                    _pushableObject = hit.collider.GetComponent<PushableObject>();
+                    StartPush();
+                }
+            }
+        }
         else if (_inputAttack) { StartAttack(); }
     }
 
@@ -301,14 +316,47 @@ public class BasicPlayerController : MonoBehaviour
         _playerAnimator.Play("Jump");
         _targetVelocityY = Mathf.Sqrt(JumpHeight * -2f * Gravity);
         _inputRoll = false;
+        _jumpHangTimer = -1f;
     }
     private void Jump()
     {
+        RaycastHit hit;
+        int lm = 1 << 6;
+        lm = ~lm;
+        Ray[] rays = new Ray[4];
+        rays[0] = new Ray(transform.position, Vector3.forward);
+        rays[1] = new Ray(transform.position, Vector3.back);
+        rays[2] = new Ray(transform.position, Vector3.left);
+        rays[3] = new Ray(transform.position, Vector3.right);
+        foreach (var ray in rays)
+        {
+            if (Physics.Raycast(ray, out hit, 1f, lm) && _jumpHangTimer == -1f)
+            {
+                if (Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) < 35)
+                {
+                    ClearHorizontalMotion();
+                    _playerController.enabled = false;
+                    transform.position = hit.point + (hit.normal * 0.5f);
+                    _playerController.enabled = true;
+                    _jumpHangTimer = 0.35f;
+                    _playerAnimator.Play("Hang");
+                    break;
+                }
+            }
+        }
+
+
+        if (_jumpHangTimer > 0)
+        {
+            _targetVelocityY = 0;
+            _jumpHangTimer -= Time.deltaTime;
+        }
+
         StopJump();
     }
     private void StopJump() 
     {
-        if(_targetVelocityY <= 0)
+        if(_targetVelocityY < 0 && _jumpHangTimer <= 0)
         {
             if (!_playerController.isGrounded)
             {
@@ -318,6 +366,14 @@ public class BasicPlayerController : MonoBehaviour
             {
                 StartIdle();
             }
+
+        }
+        else if(_jumpHangTimer > 0 && _inputRoll)
+        {
+            _moveDirection = RootGeometry.transform.forward * -1;
+            _moveDirection.y = 0;
+            RootGeometry.transform.LookAt(transform.position + _moveDirection);
+            StartRoll();
         }
     }
 
@@ -363,11 +419,17 @@ public class BasicPlayerController : MonoBehaviour
         }
         else if (_inputRoll)
         {
-            if(_pushableObject != null)
+            RaycastHit[] hits = Physics.RaycastAll(transform.position, RootGeometry.transform.forward, 0.6f);
+            foreach (var hit in hits)
             {
-                StartPush();
+                if (hit.collider.isTrigger && hit.collider.tag == "PushableObject")
+                {
+                    _pushableObject = hit.collider.GetComponent<PushableObject>();
+                    StartPush();
+                }
             }
-            else
+            
+            if(_pushableObject == null)
             {
                 StartRoll();
             }
@@ -390,16 +452,44 @@ public class BasicPlayerController : MonoBehaviour
             {
                 if(Physics.Raycast(ray, out hit, 1f,lm))
                 {
-                    if(Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) < 75)
+
+                    if(Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) > 75) { break; }
+
+
+                    if (Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) < 35)
                     {
-                        //Use the cross product of the normal and the direction of the player to get wether to go left or right ?
-                        Debug.Log(Vector3.Cross(hit.normal * -1, RootGeometry.transform.forward));
-                        RootGeometry.transform.LookAt(transform.position + hit.normal*-1 + Vector3.up);
-                        _playerController.enabled = false;
-                        transform.position = hit.point + hit.normal;
-                        _playerController.enabled = true;
-                        StartWallRun();
+                        ClearHorizontalMotion();
+                        _targetVelocityY = Mathf.Sqrt(WallRunHeight * -2f * Gravity);
+                        _wallRunAnimation = "WallRun";
                     }
+                    else if (Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) <= 75)
+                    {
+                        Vector3 v = Vector3.Cross(hit.normal * -1, RootGeometry.transform.forward);
+                        if(v.y < 0)
+                        {
+                            _moveDirection = (Quaternion.Euler(0f, 90f, 0f) * hit.normal);
+                            _moveDirection.y = 0;
+                            _moveDirection.Normalize();
+                            _wallRunAnimation = "WallRunL";
+                        }
+                        else
+                        {
+                            _moveDirection = (Quaternion.Euler(0f, -90f, 0f) * hit.normal);
+                            _moveDirection.y = 0;
+                            _moveDirection.Normalize();
+                            _wallRunAnimation = "WallRunR";
+                        }
+                        SetHorizontalMotion(JumpSpeed);
+                        _targetVelocityY = Mathf.Sqrt(WallRunHeight*0.75f * -2f * Gravity);
+                    }
+
+                    RootGeometry.transform.LookAt(transform.position + -hit.normal);
+                    _playerController.enabled = false;
+                    transform.position = hit.point + (hit.normal * 0.5f);
+                    _playerController.enabled = true;
+
+                    StartWallRun();
+                    break;
                 }
             }
         }
@@ -412,29 +502,33 @@ public class BasicPlayerController : MonoBehaviour
     private void StartWallRun()
     {
         _currentState = PlayerStates.WallRun;
-        _playerAnimator.Play("WallRun");
-        ClearHorizontalMotion();
-        _targetVelocityY = Mathf.Sqrt(WallRunHeight * -2f * Gravity);
-
+        Vector3.Angle(RootGeometry.transform.forward, _moveDirection);
+        _playerAnimator.Play(_wallRunAnimation);
+        _inputBlock = false;
+        _wallRunTimer = 0f;
     }
     private void WallRun()
     {
+        _wallRunTimer += Time.deltaTime;
         StopWallRun();
     }
     private void StopWallRun()
     {
-        if (!_inputBlock)
+        if (_wallRunTimer >= 1f || !Physics.Raycast(transform.position, RootGeometry.forward, 2.5f))
         {
             _targetVelocityY *= 0.5f;
             StartFall();
         }
         else if (_inputRoll)
         {
-
             _moveDirection = RootGeometry.transform.forward * -1;
             _moveDirection.y = 0;
             RootGeometry.transform.LookAt(transform.position+_moveDirection);
             StartRoll();
+        }
+        else if (_playerController.isGrounded)
+        {
+            StartIdle();
         }
     }
 
@@ -443,17 +537,11 @@ public class BasicPlayerController : MonoBehaviour
         _currentState = PlayerStates.Roll;
         _playerAnimator.Play("Roll");
         _inputRoll = false;
+        _targetVelocityXZ = RollSpeed;
+        SetHorizontalMotion(_targetVelocityXZ);
     }
     private void Roll()
     {
-        _targetVelocityXZ = Mathf.Lerp(_targetVelocityXZ, RollSpeed, Time.deltaTime * 25);
-        if (_targetVelocityXZ > RollSpeed - 0.1f)
-        {
-            _targetVelocityXZ = RollSpeed;
-        }
-
-        SetHorizontalMotion(_targetVelocityXZ);
-
         StopRoll();
     }
     private void StopRoll()
@@ -465,10 +553,18 @@ public class BasicPlayerController : MonoBehaviour
                 _targetVelocityXZ = MaxSpeed;
                 StartRun();
             }
-            else if (!_playerController.isGrounded)
+            else if (!_playerController.isGrounded && !Physics.Raycast(transform.position, Vector3.down, 2f))
             {
-                SetHorizontalMotion(JumpSpeed);
-                StartJump();
+                if(_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime <= 0.25f)
+                {
+                    SetHorizontalMotion(JumpSpeed);
+                    StartJump();
+                }
+                else
+                {
+                    StartFall();
+                }
+
             }
         }
     }
@@ -494,29 +590,8 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Attack;
         _playerAnimator.Play("Attack");
-        _playerAnimator.SetInteger("AttackLevel", 1);
-        //CheckEnemy ? Default to where the camera points
         ClearHorizontalMotion();
-        if(_currentTarget != null)
-        {
-            Vector3 v = (_currentTarget.transform.position - transform.position);
-            _moveDirection = v;
-            if(Vector3.Distance(_currentTarget.transform.position, transform.position) <= DistanceFromTarget)
-            {
-                ClearHorizontalMotion();
-            }
-            else
-            {
-                SetHorizontalMotion(60 / v.magnitude);
-            }
-        }
-        else
-        {
-            _moveDirection = CameraRoot.rotation * Vector3.forward;
-        }
-        _moveDirection.y = 0;
-        _inputAttack = false;
-        RootGeometry.transform.LookAt(_playerController.transform.position + _moveDirection);
+        AttackDirection();
     }
     private void Attack()
     {
@@ -526,6 +601,14 @@ public class BasicPlayerController : MonoBehaviour
         }
         StopAttack();
     }
+    private void AttackDirection()
+    {
+        Vector3 movedirection = new Vector3(_inputMove.x, 0, _inputMove.y) == Vector3.zero ? Vector3.forward : new Vector3(_inputMove.x, 0, _inputMove.y);
+        _moveDirection = CameraRoot.rotation * movedirection;
+        _moveDirection.y = 0;
+        _inputAttack = false;
+        RootGeometry.transform.LookAt(_playerController.transform.position + _moveDirection);
+    }
     private void StopAttack()
     {
         if (IsAnimatorMatchingState("Attack"))
@@ -533,7 +616,7 @@ public class BasicPlayerController : MonoBehaviour
             if (_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0.65f && _inputAttack)
             {
                 _playerAnimator.Play("Attack2");
-                _inputAttack = false;
+                AttackDirection();
             }
 
         }
@@ -541,8 +624,16 @@ public class BasicPlayerController : MonoBehaviour
         {
             if (_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0.65f && _inputAttack)
             {
+                _playerAnimator.Play("Attack3");
+                AttackDirection();
+            }
+        }
+        else if (IsAnimatorMatchingState("Attack3"))
+        {
+            if (_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0.65f && _inputAttack)
+            {
                 _playerAnimator.Play("Attack");
-                _inputAttack = false;
+                AttackDirection();
             }
         }
 
@@ -557,20 +648,27 @@ public class BasicPlayerController : MonoBehaviour
     {
         _currentState = PlayerStates.Hurt;
         _playerAnimator.Play("Hurt");
+        _hurtTimer = 0f;
+        _moveDirection = _lastHurtDirection;
+        ClearHorizontalMotion();
     }
     private void Hurt()
     {
-
+        _hurtTimer += Time.deltaTime;
+        StopHurt();
     }
     private void StopHurt()
     {
-
+        if(_hurtTimer >= 0.5f)
+        {
+            StartIdle();
+        }
     }
     
     private void StartPush()
     {
         _currentState = PlayerStates.Push;
-        _playerAnimator.Play("Push");
+        _playerAnimator.Play("Grab", 0, 1f);
         _cameraLocked = true;
         Vector3 v = _pushableObject.transform.position;
         Vector3 s = _pushableObject.transform.localScale/2;
@@ -605,24 +703,29 @@ public class BasicPlayerController : MonoBehaviour
         if(newDirection.z > 0)
         {
             //Push Forward 
-            _pushableObject.Push(RootGeometry.forward);
+            _playerAnimator.Play("Push");
+            _pushableObject.Push(RootGeometry.forward, 2f);
         }
         else if(newDirection.z < 0)
         {
-            //Push Backward
-            _pushableObject.Push(RootGeometry.forward*-1);
+            //Pull
+            _playerAnimator.Play("Pull");
+            _pushableObject.Push(RootGeometry.forward*-1, 4f);
         }
         else if(newDirection.x < 0 && CanPushSideways)
         {
             //Push Left
-            _pushableObject.Push(RootGeometry.right*-1);
+            _pushableObject.Push(RootGeometry.right*-1, 2f);
         }
         else if(newDirection.x > 0 && CanPushSideways)
         {
             //Push Right
-            _pushableObject.Push(RootGeometry.right);
+            _pushableObject.Push(RootGeometry.right, 2f);
         }
-
+        else if(!_playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("Grab") && !_pushableObject.BeingPushed)
+        {
+            _playerAnimator.Play("Grab",0,1f);
+        }
 
         StopPush();
     }
@@ -633,6 +736,7 @@ public class BasicPlayerController : MonoBehaviour
             transform.parent = null;
             _playerController.enabled = true;
             _cameraLocked = false;
+            _pushableObject = null;
             StartIdle();
         }
     }
@@ -644,13 +748,13 @@ public class BasicPlayerController : MonoBehaviour
         _playerController.Move(_moveMotion * Time.deltaTime);
     }
 
-    void SetHorizontalMotion(float speed)
+    public void SetHorizontalMotion(float speed)
     {
         _moveMotion.x = _moveDirection.x * speed;
         _moveMotion.z = _moveDirection.z * speed;
     }
 
-    void ClearHorizontalMotion()
+    public void ClearHorizontalMotion()
     {
         _moveMotion.x = 0;
         _moveMotion.z = 0;
@@ -667,17 +771,15 @@ public class BasicPlayerController : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.tag == "PushableObject")
+        if(other.tag == "EnemyWeapon")
         {
-            _pushableObject = other.gameObject.GetComponent<PushableObject>();
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.tag == "PushableObject")
-        {
-            _pushableObject = null;
+            if(_currentState != PlayerStates.Hurt)
+            {
+                _lastHurtDirection = transform.position - other.GetComponentInParent<Skeleton>().transform.position;
+                _lastHurtDirection.y = 0;
+                _lastHurtDirection.Normalize();
+                StartHurt();
+            }
         }
     }
 }
