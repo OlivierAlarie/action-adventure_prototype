@@ -53,6 +53,7 @@ public class BasicPlayerController : MonoBehaviour
     private float _targetVelocityY = 0f;
     private float _terminalVelocityY = -53f;
     private float _wallRunTimer = 0f;
+    private string _wallRunAnimation;
     private float _jumpHangTimer = 0f;
     private float _hurtTimer = 0f;
     private GameObject _currentTarget;
@@ -458,6 +459,7 @@ public class BasicPlayerController : MonoBehaviour
                     {
                         ClearHorizontalMotion();
                         _targetVelocityY = Mathf.Sqrt(WallRunHeight * -2f * Gravity);
+                        _wallRunAnimation = "WallRun";
                     }
                     else if (Vector3.Angle(hit.normal * -1, RootGeometry.transform.forward) <= 75)
                     {
@@ -467,12 +469,14 @@ public class BasicPlayerController : MonoBehaviour
                             _moveDirection = (Quaternion.Euler(0f, 90f, 0f) * hit.normal);
                             _moveDirection.y = 0;
                             _moveDirection.Normalize();
+                            _wallRunAnimation = "WallRunL";
                         }
                         else
                         {
                             _moveDirection = (Quaternion.Euler(0f, -90f, 0f) * hit.normal);
                             _moveDirection.y = 0;
                             _moveDirection.Normalize();
+                            _wallRunAnimation = "WallRunR";
                         }
                         SetHorizontalMotion(JumpSpeed);
                         _targetVelocityY = Mathf.Sqrt(WallRunHeight*0.75f * -2f * Gravity);
@@ -497,7 +501,8 @@ public class BasicPlayerController : MonoBehaviour
     private void StartWallRun()
     {
         _currentState = PlayerStates.WallRun;
-        _playerAnimator.Play("WallRun");
+        Vector3.Angle(RootGeometry.transform.forward, _moveDirection);
+        _playerAnimator.Play(_wallRunAnimation);
         _inputBlock = false;
         _wallRunTimer = 0f;
     }
