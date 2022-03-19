@@ -244,7 +244,7 @@ public class BasicPlayerController : MonoBehaviour
         }
         else
         {
-            _targetVelocityY = -1f;
+            _targetVelocityY = -10f;
         }
     }
 
@@ -336,9 +336,10 @@ public class BasicPlayerController : MonoBehaviour
                 {
                     ClearHorizontalMotion();
                     _playerController.enabled = false;
-                    transform.position = hit.point + hit.normal;
+                    transform.position = hit.point + (hit.normal * 0.5f);
                     _playerController.enabled = true;
                     _jumpHangTimer = 0.35f;
+                    _playerAnimator.Play("Hang");
                     break;
                 }
             }
@@ -484,7 +485,7 @@ public class BasicPlayerController : MonoBehaviour
 
                     RootGeometry.transform.LookAt(transform.position + -hit.normal);
                     _playerController.enabled = false;
-                    transform.position = hit.point + hit.normal;
+                    transform.position = hit.point + (hit.normal * 0.5f);
                     _playerController.enabled = true;
 
                     StartWallRun();
@@ -536,20 +537,9 @@ public class BasicPlayerController : MonoBehaviour
         _currentState = PlayerStates.Roll;
         _playerAnimator.Play("Roll");
         _inputRoll = false;
-        _targetVelocityXZ = RollSpeed;
-        SetHorizontalMotion(_targetVelocityXZ);
     }
     private void Roll()
     {
-        /*
-        _targetVelocityXZ = Mathf.Lerp(_targetVelocityXZ, RollSpeed, Time.deltaTime * 25);
-        if (_targetVelocityXZ > RollSpeed - 0.1f)
-        {
-            _targetVelocityXZ = RollSpeed;
-        }
-
-        SetHorizontalMotion(_targetVelocityXZ);*/
-
         StopRoll();
     }
     private void StopRoll()
@@ -558,13 +548,20 @@ public class BasicPlayerController : MonoBehaviour
         {
             if (!IsAnimatorPlaying())
             {
-                _targetVelocityXZ = MaxSpeed;
                 StartRun();
             }
-            else if (!_playerController.isGrounded && !Physics.Raycast(transform.position,Vector3.down,2f))
+            else if (!_playerController.isGrounded && !Physics.Raycast(transform.position, Vector3.down, 2f))
             {
-                SetHorizontalMotion(JumpSpeed);
-                StartJump();
+                if(_playerAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime <= 0.25f)
+                {
+                    SetHorizontalMotion(JumpSpeed);
+                    StartJump();
+                }
+                else
+                {
+                    StartFall();
+                }
+
             }
         }
     }
@@ -668,7 +665,7 @@ public class BasicPlayerController : MonoBehaviour
     private void StartPush()
     {
         _currentState = PlayerStates.Push;
-        _playerAnimator.Play("Push");
+        _playerAnimator.Play("Grab", 0, 1f);
         _cameraLocked = true;
         Vector3 v = _pushableObject.transform.position;
         Vector3 s = _pushableObject.transform.localScale/2;
@@ -703,11 +700,13 @@ public class BasicPlayerController : MonoBehaviour
         if(newDirection.z > 0)
         {
             //Push Forward 
+            _playerAnimator.Play("Push");
             _pushableObject.Push(RootGeometry.forward, 2f);
         }
         else if(newDirection.z < 0)
         {
-            //Push Backward
+            //Pull
+            _playerAnimator.Play("Pull");
             _pushableObject.Push(RootGeometry.forward*-1, 4f);
         }
         else if(newDirection.x < 0 && CanPushSideways)
@@ -720,7 +719,10 @@ public class BasicPlayerController : MonoBehaviour
             //Push Right
             _pushableObject.Push(RootGeometry.right, 2f);
         }
-
+        else if(!_playerAnimator.GetCurrentAnimatorStateInfo(0).IsName("Grab") && !_pushableObject.BeingPushed)
+        {
+            _playerAnimator.Play("Grab",0,1f);
+        }
 
         StopPush();
     }
