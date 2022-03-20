@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class ArenaManager : MonoBehaviour
 {
     private List<Skeleton> _enemies = new List<Skeleton>();
     private List<Gate> _gates = new List<Gate>();
     public Transform Player;
+    public bool IsBossArena;
     // Start is called before the first frame update
     void Awake()
     {
@@ -41,6 +43,11 @@ public class ArenaManager : MonoBehaviour
         {
             gate.IsOpen = true;
         }
+
+        if (IsBossArena)
+        {
+            SceneManager.LoadScene("End");
+        }
     }
 
     private void OnArenaStart()
@@ -60,12 +67,4 @@ public class ArenaManager : MonoBehaviour
         }
     }
 
-    /*
-    private void OnTriggerExit(Collider other)
-    {
-        if(other.tag == "Player")
-        {
-            Player = null;
-        }
-    }*/
 }

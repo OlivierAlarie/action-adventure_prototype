@@ -141,7 +141,7 @@ public class Skeleton: MonoBehaviour
         {
             _hurtTimer -= Time.deltaTime;
             _agent.isStopped = true;
-            _animator.Play("Hurt");//Change to Hurt, Find HurtAnimation
+            //Change to Hurt, Find HurtAnimation
             if(_hurtTimer > _totalHurtDuration - 0.25f)
             {
                 _controller.Move(_lastHurtDirection * 10 * Time.deltaTime);
@@ -158,7 +158,7 @@ public class Skeleton: MonoBehaviour
             _agent.isStopped = true;
             _controller.enabled = false;
 
-            if(Arena != null)
+            if(Arena != null && _animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1)
             {
                 Arena.OnEnemyDestroyed(this);
             }
@@ -198,6 +198,7 @@ public class Skeleton: MonoBehaviour
             {
                 _currentState = AiState.Hurting;
                 _hurtTimer = _totalHurtDuration;
+                _animator.Play("Hurt",-1,0f);
             }
             
         }
