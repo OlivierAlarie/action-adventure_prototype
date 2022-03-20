@@ -16,7 +16,7 @@ public class Skeleton: MonoBehaviour
     [SerializeField]
     private float _boundry = 5f;
     [SerializeField]
-    private int _health = 5;
+    private int _health = 3;
     [SerializeField]
     private Transform _pointTogo;
     private Vector3 _pointTocome;

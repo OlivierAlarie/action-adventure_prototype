@@ -72,7 +72,18 @@ public partial class @GameMasterInput : IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""ac750477-5d3c-4739-bba6-0581ad184c34"",
-                    ""path"": """",
+                    ""path"": ""<Keyboard>/escape"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Pause"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7883d2a9-7dc3-4a7b-94dc-828d982507a8"",
+                    ""path"": ""<Gamepad>/start"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
