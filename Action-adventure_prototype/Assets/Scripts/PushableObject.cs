@@ -7,6 +7,7 @@ public class PushableObject : MonoBehaviour
     [SerializeField] private float _speed;
     private Vector3 _destination;
     public bool BeingPushed;
+    public bool IsLocked;
     private bool _wouldCollide;
     private RaycastHit _hit;
     private Vector3 _lastDirection;
@@ -21,6 +22,8 @@ public class PushableObject : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (IsLocked) return;
+
         if (BeingPushed)
         {
             if(Vector3.Distance(transform.position, _destination) < Mathf.Epsilon)

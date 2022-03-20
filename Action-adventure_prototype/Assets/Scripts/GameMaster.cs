@@ -3,17 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 
 
 public class GameMaster : MonoBehaviour
 {
     public static GameMaster Instance { get; private set; }
 
-    public PauseMenu PauseMenu;
+    public GameObject PauseMenu;
+    public GameObject DefeatMenu;
+    public GameObject ResumeButton;
+    public GameObject RetryButton;
     public BasicPlayerController Player;
     public MaterialSwitcher NormalWord;
     public MaterialSwitcher RedWorld;
     public BasicCameraController Camera;
+    public bool GameIsPaused = false;
 
     private GameMasterInput _gmInputs;
     private Scene _activeScene;
@@ -30,6 +35,7 @@ public class GameMaster : MonoBehaviour
             Instance = this;
             _gmInputs = new GameMasterInput();
             _gmInputs.GameMasterControls.SwitchWorld.started += SwitchWorld;
+            _gmInputs.GameMasterControls.Pause.started += SwitchPauseMenu;
         }
         _activeScene = SceneManager.GetActiveScene();
     }
@@ -45,7 +51,11 @@ public class GameMaster : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        
+        if(Player.Health <= 0 && !DefeatMenu.activeSelf)
+        {
+            //Show Defeat Screen
+            Defeat();
+        }
     }
 
     private void SwitchWorld(InputAction.CallbackContext context)
@@ -55,13 +65,51 @@ public class GameMaster : MonoBehaviour
         Camera.SwitchWorld();
     }
 
-    private void Reload()
+    private void SwitchPauseMenu(InputAction.CallbackContext context)
     {
-        SceneManager.LoadScene(_activeScene.name);
-        PauseMenu.Resume();
+        if (!context.ReadValueAsButton()) return;
+
+        if (Player.Health <= 0) return;
+
+        if (GameIsPaused) { Resume(); }
+        else { Pause(); }
     }
-    private void QuitGame()
+
+    public void Defeat()
+    {
+        Cursor.lockState = CursorLockMode.Confined;
+        DefeatMenu.SetActive(true);
+        EventSystem.current.SetSelectedGameObject(RetryButton);
+    }
+    public void Retry()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        DefeatMenu.SetActive(false);
+        Time.timeScale = 1f;
+        GameIsPaused = false;
+        Player.Health = 6;
+        SceneManager.LoadScene(_activeScene.name);
+    }
+
+    public void Resume()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        PauseMenu.SetActive(false);
+        Time.timeScale = 1f;
+        GameIsPaused = false;
+    }
+
+    public void Pause()
+    {
+        Cursor.lockState = CursorLockMode.Confined;
+        EventSystem.current.SetSelectedGameObject(ResumeButton);
+        PauseMenu.SetActive(true);
+        Time.timeScale = 0f;
+        GameIsPaused = true;
+    }
+    public void QuitGame()
     {
         Application.Quit();
     }
+
 }
