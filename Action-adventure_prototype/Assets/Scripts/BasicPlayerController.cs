@@ -24,6 +24,7 @@ public class BasicPlayerController : MonoBehaviour
     public Animator _playerAnimator;
     public CharacterController _playerController;
     public int Health = 6;
+    public int NumberOfKeys = 0;
     public float MaxSpeed = 5f; //Target speed for the character
     public float SpeedChangeFactor = 5f;//Acceleration/Decceleration
     public float RollSpeed = 10f;//Target speed during roll
@@ -782,6 +783,11 @@ public class BasicPlayerController : MonoBehaviour
                 StartHurt();
                 Health--;
             }
+        }
+        else if(other.tag == "Key")
+        {
+            NumberOfKeys++;
+            Destroy(other.gameObject);
         }
     }
 }
