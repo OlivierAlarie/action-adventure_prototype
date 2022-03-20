@@ -9,11 +9,12 @@ public class GameMaster : MonoBehaviour
 {
     public static GameMaster Instance { get; private set; }
 
-    public PauseMenu PauseMenu;
+    public UIManager UI;
     public BasicPlayerController Player;
     public MaterialSwitcher NormalWord;
     public MaterialSwitcher RedWorld;
     public BasicCameraController Camera;
+    public bool GameIsPaused = false;
 
     private GameMasterInput _gmInputs;
     private Scene _activeScene;
@@ -45,7 +46,10 @@ public class GameMaster : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        
+        if(Player.Health == 0)
+        {
+            //Show Defeat Screen
+        }
     }
 
     private void SwitchWorld(InputAction.CallbackContext context)
@@ -58,10 +62,25 @@ public class GameMaster : MonoBehaviour
     private void Reload()
     {
         SceneManager.LoadScene(_activeScene.name);
-        PauseMenu.Resume();
     }
     private void QuitGame()
     {
         Application.Quit();
     }
+
+    public void Resume()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        UI.PauseMenuSetActive(false);
+        Time.timeScale = 1f;
+        GameIsPaused = false;
+    }
+    public void Pause()
+    {
+        Cursor.lockState = CursorLockMode.Confined;
+        UI.PauseMenuSetActive(true);
+        Time.timeScale = 0f;
+        GameIsPaused = true;
+    }
+
 }

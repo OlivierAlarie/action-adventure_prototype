@@ -23,6 +23,7 @@ public class BasicPlayerController : MonoBehaviour
     [Header("Character")]
     public Animator _playerAnimator;
     public CharacterController _playerController;
+    public int Health = 5;
     public float MaxSpeed = 5f; //Target speed for the character
     public float SpeedChangeFactor = 5f;//Acceleration/Decceleration
     public float RollSpeed = 10f;//Target speed during roll
@@ -141,7 +142,9 @@ public class BasicPlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (PauseMenu.GameIsPaused) { return; }
+        if (GameMaster.Instance.GameIsPaused) { return; }
+
+        if(Health <= 0) { return; }
 
         RunCamera();
 
