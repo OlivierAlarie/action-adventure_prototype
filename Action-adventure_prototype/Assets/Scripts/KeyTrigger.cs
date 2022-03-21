@@ -7,6 +7,7 @@ public class KeyTrigger : MonoBehaviour
     public Transform Spawnpoint;
     public GameObject key;
     public GameObject player;
+    bool isTriggered;
     
     // Start is called before the first frame update
     void Start()
@@ -20,11 +21,13 @@ public class KeyTrigger : MonoBehaviour
         
     }
 
-
     private void OnTriggerEnter()
     {
-       
+        if (!isTriggered)
+        {
             Instantiate(key, Spawnpoint.position, Spawnpoint.rotation);
-            Debug.Log("You solved the puzzle, go open the door");       
-     }
+            Debug.Log("You solved the puzzle, go open the door");
+            isTriggered = true;
+        }   
+    }
 }
