@@ -23,7 +23,8 @@ public class BasicPlayerController : MonoBehaviour
     [Header("Character")]
     public Animator _playerAnimator;
     public CharacterController _playerController;
-    public int Health = 5;
+    public int Health = 6;
+    public int NumberOfKeys = 0;
     public float MaxSpeed = 5f; //Target speed for the character
     public float SpeedChangeFactor = 5f;//Acceleration/Decceleration
     public float RollSpeed = 10f;//Target speed during roll
@@ -142,7 +143,7 @@ public class BasicPlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (GameMaster.Instance.GameIsPaused) { return; }
+        if (GameMaster.Instance != null && GameMaster.Instance.GameIsPaused) { return; }
 
         if(Health <= 0) { return; }
 
@@ -243,6 +244,7 @@ public class BasicPlayerController : MonoBehaviour
             if (_targetVelocityY < _terminalVelocityY)
             {
                 _targetVelocityY = _terminalVelocityY;
+                Health = 0;
             }
         }
         else
@@ -779,7 +781,13 @@ public class BasicPlayerController : MonoBehaviour
                 _lastHurtDirection.y = 0;
                 _lastHurtDirection.Normalize();
                 StartHurt();
+                Health--;
             }
+        }
+        else if(other.tag == "Key")
+        {
+            NumberOfKeys++;
+            Destroy(other.gameObject);
         }
     }
 }
