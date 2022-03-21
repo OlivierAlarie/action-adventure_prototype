@@ -9,7 +9,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 7173761733433952508, guid: 600e71c0e216cee46823efef37da25b3, type: 3}
       propertyPath: m_Name
-      value: KeyObject
+      value: KeyPickup
+      objectReference: {fileID: 0}
+    - target: {fileID: 7173761733433952508, guid: 600e71c0e216cee46823efef37da25b3, type: 3}
+      propertyPath: m_TagString
+      value: Key
       objectReference: {fileID: 0}
     - target: {fileID: 7173761733433952509, guid: 600e71c0e216cee46823efef37da25b3, type: 3}
       propertyPath: m_RootOrder

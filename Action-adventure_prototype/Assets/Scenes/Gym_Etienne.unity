@@ -1973,7 +1973,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh490104
+  m_Name: pb_Mesh86360
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -3332,7 +3332,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh489896
+  m_Name: pb_Mesh86142
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -3497,6 +3497,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 8196944481779610753}
     m_Modifications:
+    - target: {fileID: 9171018380972148432, guid: ea6f9d08358dad34ea56f8666a5e0533, type: 3}
+      propertyPath: m_Materials.Array.data[1]
+      value: 
+      objectReference: {fileID: 2100000, guid: af666d0f075af91438d2e16d924abd5c, type: 2}
     - target: {fileID: 9171018380977330125, guid: ea6f9d08358dad34ea56f8666a5e0533, type: 3}
       propertyPath: _pointTogo
       value: 
@@ -3551,7 +3555,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9171018380977425326, guid: ea6f9d08358dad34ea56f8666a5e0533, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ea6f9d08358dad34ea56f8666a5e0533, type: 3}
@@ -13448,10 +13452,6 @@ PrefabInstance:
     - target: {fileID: 958307417016719243, guid: 28c2b857c4f77be4da1a51f470a2797e, type: 3}
       propertyPath: m_Name
       value: KeyPickup
-      objectReference: {fileID: 0}
-    - target: {fileID: 958307417016719243, guid: 28c2b857c4f77be4da1a51f470a2797e, type: 3}
-      propertyPath: m_TagString
-      value: Key
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 28c2b857c4f77be4da1a51f470a2797e, type: 3}
